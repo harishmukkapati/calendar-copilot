@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -104,43 +105,48 @@ final class PlanPrompt {
 
     /** Gemini responseSchema (OpenAPI subset). The server re-validates everything anyway. */
     static Map<String, Object> responseSchema() {
-        Map<String, Object> requirement = object(Map.of(
+        Map<String, Object> requirement = object(
                 "id", string("Short id such as R1"),
                 "text", string("The requirement in plain words"),
                 "documentId", string("Id of the document it came from, e.g. D1"),
-                "quote", string("Exact passage copied from that document")),
-                List.of("id", "text", "documentId", "quote"));
+                "quote", string("Exact passage copied from that document"));
 
-        Map<String, Object> subtask = object(Map.of(
+        Map<String, Object> subtask = object(
                 "title", string(null),
                 "basis", enumString("SOURCE", "SUGGESTED"),
-                "requirementIds", array(string(null), MAX_REQUIREMENTS)),
-                List.of("title", "basis", "requirementIds"));
+                "requirementIds", array(string(null), MAX_REQUIREMENTS));
 
-        Map<String, Object> task = object(Map.of(
+        Map<String, Object> task = object(
                 "title", string(null),
                 "description", string(null),
                 "basis", enumString("SOURCE", "SUGGESTED"),
                 "requirementIds", array(string(null), MAX_REQUIREMENTS),
                 "suggestedDueDate", string("YYYY-MM-DD, or empty"),
-                "subtasks", array(subtask, MAX_SUBTASKS)),
-                List.of("title", "description", "basis", "requirementIds", "suggestedDueDate", "subtasks"));
+                "subtasks", array(subtask, MAX_SUBTASKS));
 
-        Map<String, Object> plan = object(Map.of(
+        return object(
                 "summary", string(null),
                 "requirements", array(requirement, MAX_REQUIREMENTS),
                 "tasks", array(task, MAX_TASKS),
-                "uncertainties", array(string(null), 6)),
-                List.of("summary", "requirements", "tasks", "uncertainties"));
-        plan.put("propertyOrdering", List.of("summary", "requirements", "tasks", "uncertainties"));
-        return plan;
+                "uncertainties", array(string(null), 6));
     }
 
-    private static Map<String, Object> object(Map<String, Object> properties, List<String> required) {
-        Map<String, Object> schema = new java.util.LinkedHashMap<>();
+    /**
+     * An object schema whose properties are all required, in the given order. The model
+     * generates fields in propertyOrdering order (e.g. a task's title before its subtasks),
+     * so the order is fixed explicitly rather than left to map iteration order.
+     */
+    private static Map<String, Object> object(Object... namesAndSchemas) {
+        Map<String, Object> properties = new LinkedHashMap<>();
+        for (int i = 0; i < namesAndSchemas.length; i += 2) {
+            properties.put((String) namesAndSchemas[i], namesAndSchemas[i + 1]);
+        }
+        List<String> names = List.copyOf(properties.keySet());
+        Map<String, Object> schema = new LinkedHashMap<>();
         schema.put("type", "OBJECT");
         schema.put("properties", properties);
-        schema.put("required", required);
+        schema.put("required", names);
+        schema.put("propertyOrdering", names);
         return schema;
     }
 

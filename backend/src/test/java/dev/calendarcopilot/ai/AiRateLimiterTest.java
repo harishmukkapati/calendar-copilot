@@ -70,6 +70,11 @@ class AiRateLimiterTest {
 
     @Test
     void enforcesLimitsExactlyUnderParallelRequests() throws Exception {
+        // High concurrency cap so only the hourly limit is under test (the cap of 4 has its own test).
+        AiProperties base = TestAi.props();
+        AiRateLimiter limiter = new AiRateLimiter(new AiProperties(base.apiKey(), base.model(), base.thinkingLevel(),
+                base.baseUrl(), base.timeout(), base.maxOutputTokens(), base.maxFiles(), base.maxFileSize(),
+                base.maxPdfPages(), base.maxDocumentChars(), base.maxContextChars(), 100, base.limits()), clock);
         UUID workspace = UUID.randomUUID();
         java.util.concurrent.atomic.AtomicInteger allowed = new java.util.concurrent.atomic.AtomicInteger();
         java.util.concurrent.atomic.AtomicInteger rejected = new java.util.concurrent.atomic.AtomicInteger();

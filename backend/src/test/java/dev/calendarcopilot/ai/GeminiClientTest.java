@@ -16,6 +16,9 @@ import org.springframework.http.HttpStatus;
 
 import com.sun.net.httpserver.HttpServer;
 
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+
 import dev.calendarcopilot.ai.GeminiClient.InlinePart;
 import dev.calendarcopilot.ai.GeminiClient.TextPart;
 import dev.calendarcopilot.common.ApiException;
@@ -72,12 +75,15 @@ class GeminiClientTest {
         assertThat(call(client)).isEqualTo("{\"tasks\":[]}");
         assertThat(lastPath.get()).isEqualTo("/v1beta/models/gemini-test:generateContent");
         assertThat(lastApiKey.get()).isEqualTo("test-key");
-        assertThat(lastBody.get())
-                .contains("\"responseMimeType\":\"application/json\"")
-                .contains("\"responseSchema\"")
-                .contains("\"thinkingLevel\":\"low\"")
-                .contains("\"systemInstruction\"")
-                .contains("\"inlineData\":{\"mimeType\":\"image/png\"");
+        JsonNode body = JsonMapper.builder().build().readTree(lastBody.get());
+        JsonNode config = body.path("generationConfig");
+        assertThat(config.path("responseMimeType").asString()).isEqualTo("application/json");
+        assertThat(config.path("thinkingConfig").path("thinkingLevel").asString()).isEqualTo("low");
+        assertThat(config.path("responseSchema").path("propertyOrdering").get(0).asString()).isEqualTo("summary");
+        assertThat(body.path("systemInstruction").path("parts").get(0).path("text").asString()).isEqualTo("system");
+        JsonNode parts = body.path("contents").get(0).path("parts");
+        assertThat(parts.get(0).path("text").asString()).isEqualTo("hello");
+        assertThat(parts.get(1).path("inlineData").path("mimeType").asString()).isEqualTo("image/png");
     }
 
     @Test
