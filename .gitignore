@@ -1,0 +1,23 @@
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Secrets — never commit
+.env
+*.env
+!.env.example
+
+# Build output
+backend/target/
+frontend/dist/
+frontend/.angular/
+node_modules/
+
+# Terraform (state contains generated secrets)
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/*.tfvars
+!infra/terraform/example.tfvars
