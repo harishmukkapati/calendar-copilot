@@ -1,0 +1,90 @@
+#!/bin/bash
+# First-boot setup for the Calendar Copilot API on Amazon Linux 2023 (arm64).
+set -euxo pipefail
+
+dnf install -y java-21-amazon-corretto-headless amazon-cloudwatch-agent
+
+useradd --system --home-dir /opt/${project} --shell /sbin/nologin app || true
+mkdir -p /opt/${project} /var/log/${project}
+chown app:app /opt/${project} /var/log/${project}
+
+# start.sh reads secrets from SSM Parameter Store at process start, so they never
+# live in files on disk, in the AMI, in git, or in the jar.
+cat > /opt/${project}/start.sh <<'SCRIPT'
+#!/bin/bash
+set -euo pipefail
+param() {
+  aws ssm get-parameter --region ${region} --name "${ssm_prefix}/$1" --with-decryption \
+    --query Parameter.Value --output text
+}
+export DB_URL="jdbc:postgresql://${db_host}:${db_port}/${db_name}"
+export DB_USERNAME="${db_username}"
+export DB_PASSWORD="$(param db-password)"
+export ORIGIN_VERIFY_SECRET="$(param origin-verify)"
+# Optional until the AI milestone: created by hand, never by Terraform.
+export GEMINI_API_KEY="$(param gemini-api-key 2>/dev/null || echo '')"
+export GEMINI_MODEL="${gemini_model}"
+# JSON logs in production so CloudWatch can filter on fields.
+export LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs
+exec java -XX:MaxRAMPercentage=70 -XX:+UseSerialGC -jar /opt/${project}/app.jar
+SCRIPT
+chmod 755 /opt/${project}/start.sh
+
+cat > /etc/systemd/system/${project}.service <<'UNIT'
+[Unit]
+Description=Calendar Copilot API
+After=network-online.target
+Wants=network-online.target
+# The deploy script uploads the jar; until then the service stays inactive.
+ConditionPathExists=/opt/${project}/app.jar
+
+[Service]
+User=app
+ExecStart=/opt/${project}/start.sh
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/${project}/app.log
+StandardError=append:/var/log/${project}/app.log
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+cat > /etc/logrotate.d/${project} <<'ROTATE'
+/var/log/${project}/app.log {
+  daily
+  rotate 3
+  compress
+  missingok
+  copytruncate
+}
+ROTATE
+
+cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<'CWAGENT'
+{
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/${project}/app.log",
+            "log_group_name": "${log_group}",
+            "log_stream_name": "{instance_id}"
+          }
+        ]
+      }
+    }
+  }
+}
+CWAGENT
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s \
+  -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+
+systemctl daemon-reload
+systemctl enable ${project}.service
+
+# If a jar was already deployed (e.g. the instance was replaced), start it now.
+if aws s3 cp ${artifacts_uri} /opt/${project}/app.jar --region ${region}; then
+  chown app:app /opt/${project}/app.jar
+  systemctl start ${project}.service
+fi
