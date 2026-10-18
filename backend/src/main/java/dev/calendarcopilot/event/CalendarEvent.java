@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 /** A time-boxed calendar entry (meeting, class, workout). Unlike tasks, events have no hierarchy or status. */
 @Entity
@@ -43,6 +44,10 @@ public class CalendarEvent {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    /** Optimistic locking: an UPDATE based on a stale read fails instead of overwriting newer data. */
+    @Version
+    private long version;
 
     protected CalendarEvent() {
     }

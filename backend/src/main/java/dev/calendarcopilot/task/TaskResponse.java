@@ -15,7 +15,7 @@ public record TaskResponse(
         Instant createdAt,
         Instant updatedAt) {
 
-    static TaskResponse from(Task t) {
+    public static TaskResponse from(Task t) {
         return new TaskResponse(t.getId(), t.getParentId(), t.getTitle(), t.getDescription(), t.getStatus(),
                 t.getOrigin(), t.getStartAt(), t.getDueAt(), t.getSortOrder(), t.getCreatedAt(), t.getUpdatedAt());
     }

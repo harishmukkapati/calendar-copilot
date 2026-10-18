@@ -35,6 +35,12 @@ export class CalendarStore {
   /** Last user-facing error, shown as a toast. */
   readonly error = signal<string | null>(null);
 
+  /** Pending write per item ("task:1"), so writes to one item reach the server in order. */
+  private readonly queues = new Map<string, Promise<unknown>>();
+  /** Latest write number per item; responses from older writes are ignored. */
+  private readonly latestWrite = new Map<string, number>();
+  private writeCounter = 0;
+
   readonly taskById = computed(() => new Map(this.tasks().map((t) => [t.id, t])));
 
   /** parentId (null for roots) -> children in display order. */
@@ -144,13 +150,21 @@ export class CalendarStore {
     if (!before) {
       return false;
     }
+    const key = `task:${id}`;
+    const write = this.startWrite(key);
     this.replaceTask(applyTaskUpdate(before, request));
     try {
-      this.replaceTask(await this.api.updateTask(id, request));
+      const saved = await this.enqueue(key, () => this.api.updateTask(id, request));
+      if (this.isLatest(key, write)) {
+        this.replaceTask(saved);
+      }
       return true;
     } catch (e) {
-      this.replaceTask(before);
+      if (this.isLatest(key, write)) {
+        this.replaceTask(before);
+      }
       this.reportError(e, 'Could not save the task.');
+      this.resync();
       return false;
     }
   }
@@ -165,7 +179,7 @@ export class CalendarStore {
     const removed = this.subtreeIds(id);
     this.tasks.set(snapshot.filter((t) => !removed.has(t.id)));
     try {
-      await this.api.deleteTask(id);
+      await this.enqueue(`task:${id}`, () => this.api.deleteTask(id));
       return true;
     } catch (e) {
       this.tasks.set(snapshot);
@@ -204,13 +218,21 @@ export class CalendarStore {
     if (!before) {
       return false;
     }
+    const key = `event:${id}`;
+    const write = this.startWrite(key);
     this.replaceEvent({ ...before, ...stripUndefined(request) } as CalendarEvent);
     try {
-      this.replaceEvent(await this.api.updateEvent(id, request));
+      const saved = await this.enqueue(key, () => this.api.updateEvent(id, request));
+      if (this.isLatest(key, write)) {
+        this.replaceEvent(saved);
+      }
       return true;
     } catch (e) {
-      this.replaceEvent(before);
+      if (this.isLatest(key, write)) {
+        this.replaceEvent(before);
+      }
       this.reportError(e, 'Could not save the event.');
+      this.resync();
       return false;
     }
   }
@@ -219,7 +241,7 @@ export class CalendarStore {
     const snapshot = this.events();
     this.events.set(snapshot.filter((e) => e.id !== id));
     try {
-      await this.api.deleteEvent(id);
+      await this.enqueue(`event:${id}`, () => this.api.deleteEvent(id));
       return true;
     } catch (e) {
       this.events.set(snapshot);
@@ -230,6 +252,48 @@ export class CalendarStore {
 
   dismissError(): void {
     this.error.set(null);
+  }
+
+  /**
+   * Runs writes for the same item one after another. Without this, two quick toggles
+   * can be processed by the server in either order and leave the wrong final state.
+   */
+  private enqueue<T>(key: string, run: () => Promise<T>): Promise<T> {
+    const previous = this.queues.get(key);
+    // Nothing pending for this item: send right away instead of a microtask later.
+    const next = previous ? previous.catch(() => undefined).then(run) : run();
+    this.queues.set(key, next);
+    next.then(
+      () => this.queues.get(key) === next && this.queues.delete(key),
+      () => this.queues.get(key) === next && this.queues.delete(key),
+    );
+    return next;
+  }
+
+  private startWrite(key: string): number {
+    const write = ++this.writeCounter;
+    this.latestWrite.set(key, write);
+    return write;
+  }
+
+  /** Only the newest write's response may touch local state; older ones are already superseded. */
+  private isLatest(key: string, write: number): boolean {
+    return this.latestWrite.get(key) === write;
+  }
+
+  /**
+   * After a failed write the local copy may disagree with the server (e.g. another tab
+   * changed it), so reload once all pending writes have settled.
+   */
+  private async resync(): Promise<void> {
+    await Promise.allSettled([...this.queues.values()]);
+    try {
+      const [tasks, events] = await Promise.all([this.api.listTasks(), this.api.listEvents()]);
+      this.tasks.set(tasks);
+      this.events.set(events);
+    } catch {
+      // Keep the current state; the error toast is already showing.
+    }
   }
 
   private replaceTask(task: Task): void {

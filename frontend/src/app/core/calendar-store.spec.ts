@@ -23,6 +23,12 @@ function task(overrides: Partial<Task>): Task {
   };
 }
 
+async function flushMicrotasks(): Promise<void> {
+  for (let i = 0; i < 10; i++) {
+    await Promise.resolve();
+  }
+}
+
 describe('CalendarStore', () => {
   let store: CalendarStore;
   let http: HttpTestingController;
@@ -69,6 +75,45 @@ describe('CalendarStore', () => {
     expect(await result).toBe(false);
     expect(store.tasks()[0].status).toBe('TODO');
     expect(store.error()).toBe('Could not save the task.');
+
+    // After a failure the store reloads from the server to fix any drift.
+    await flushMicrotasks();
+    http.expectOne('/api/tasks').flush([task({ id: 7, title: 'From server' })]);
+    http.expectOne('/api/events').flush([]);
+    await flushMicrotasks();
+    expect(store.tasks()[0].title).toBe('From server');
+  });
+
+  it('sends rapid edits to the same task in order and ignores superseded responses', async () => {
+    store.tasks.set([task({ id: 5 })]);
+
+    const first = store.toggleComplete(store.tasks()[0]); // -> DONE
+    const second = store.toggleComplete(store.tasks()[0]); // -> TODO
+    expect(store.tasks()[0].status).toBe('TODO'); // UI reflects the latest intent immediately
+
+    // Only the first PATCH is on the wire; the second waits for it.
+    const req1 = http.expectOne({ method: 'PATCH', url: '/api/tasks/5' });
+    expect(req1.request.body).toEqual({ status: 'DONE' });
+    req1.flush(task({ id: 5, status: 'DONE' }));
+    await first;
+    expect(store.tasks()[0].status).toBe('TODO'); // stale response did not flicker the UI
+
+    await flushMicrotasks();
+    const req2 = http.expectOne({ method: 'PATCH', url: '/api/tasks/5' });
+    expect(req2.request.body).toEqual({ status: 'TODO' });
+    req2.flush(task({ id: 5, status: 'TODO', title: 'Saved' }));
+    await second;
+    expect(store.tasks()[0]).toMatchObject({ status: 'TODO', title: 'Saved' });
+  });
+
+  it('does not serialize writes to different tasks', () => {
+    store.tasks.set([task({ id: 1 }), task({ id: 2 })]);
+
+    store.toggleComplete(store.tasks()[0]);
+    store.toggleComplete(store.tasks()[1]);
+
+    http.expectOne('/api/tasks/1').flush(task({ id: 1, status: 'DONE' }));
+    http.expectOne('/api/tasks/2').flush(task({ id: 2, status: 'DONE' }));
   });
 
   it('removes a whole subtree optimistically when deleting a parent', async () => {

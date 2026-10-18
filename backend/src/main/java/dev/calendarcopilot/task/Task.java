@@ -13,6 +13,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 /**
  * A task or subtask. The hierarchy is a plain parentId column rather than a JPA
@@ -61,6 +62,10 @@ public class Task {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    /** Optimistic locking: an UPDATE based on a stale read fails instead of overwriting newer data. */
+    @Version
+    private long version;
+
     protected Task() {
     }
 
@@ -94,6 +99,7 @@ public class Task {
     public int getSortOrder() { return sortOrder; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+    public long getVersion() { return version; }
 
     public void setTitle(String title) { this.title = title; }
     public void setDescription(String description) { this.description = description; }

@@ -92,6 +92,61 @@ public class TaskService {
         return task;
     }
 
+    /**
+     * Saves a confirmed AI plan in one transaction: either everything is created or nothing is.
+     * Returns the new tasks (root first when one is created).
+     */
+    @Transactional
+    public List<Task> createPlan(UUID workspaceId, CreatePlanRequest request) {
+        workspaces.requireExists(workspaceId);
+        boolean newRoot = request.parentTaskId() == null;
+        if (newRoot && (request.title() == null || request.title().isBlank())) {
+            throw new InvalidRequestException("A title is required when the plan is not added to an existing task.");
+        }
+        int planSize = (newRoot ? 1 : 0) + request.tasks().size() + request.tasks().stream()
+                .mapToInt(t -> t.subtasks() == null ? 0 : t.subtasks().size()).sum();
+        if (tasks.countByWorkspaceId(workspaceId) + planSize > maxTasks) {
+            throw new InvalidRequestException("This plan would exceed the workspace limit of " + maxTasks + " tasks.");
+        }
+
+        List<Task> created = new java.util.ArrayList<>();
+        Task root;
+        if (newRoot) {
+            root = new Task(workspaceId, null, request.title().strip(), TaskOrigin.MANUAL);
+            root.setDescription(blankToNull(request.description()));
+            root.setDueAt(toInstant(request.dueAt()));
+            root.setSortOrder(nextSortOrder(workspaceId, null));
+            root = tasks.save(root);
+            created.add(root);
+        } else {
+            root = find(workspaceId, request.parentTaskId(), "Parent task not found.");
+            // The plan adds two levels below the parent.
+            if (depthOf(root) + 2 > maxDepth) {
+                throw new InvalidRequestException("This task is nested too deeply to add a plan under it.");
+            }
+        }
+
+        int order = newRoot ? 0 : nextSortOrder(workspaceId, root.getId());
+        for (CreatePlanRequest.PlanTask planTask : request.tasks()) {
+            Task task = new Task(workspaceId, root.getId(), planTask.title().strip(), TaskOrigin.AI);
+            task.setDescription(blankToNull(planTask.description()));
+            task.setDueAt(toInstant(planTask.dueAt()));
+            task.setSortOrder(order++);
+            task = tasks.save(task);
+            created.add(task);
+
+            int subOrder = 0;
+            for (CreatePlanRequest.PlanSubtask planSubtask : planTask.subtasks() == null
+                    ? List.<CreatePlanRequest.PlanSubtask>of() : planTask.subtasks()) {
+                Task subtask = new Task(workspaceId, task.getId(), planSubtask.title().strip(), TaskOrigin.AI);
+                subtask.setDescription(blankToNull(planSubtask.description()));
+                subtask.setSortOrder(subOrder++);
+                created.add(tasks.save(subtask));
+            }
+        }
+        return created;
+    }
+
     /** Deletes the task and, through the database cascade, all of its subtasks. */
     @Transactional
     public void delete(UUID workspaceId, Long id) {

@@ -36,5 +36,5 @@ variable "db_instance_class" {
 variable "gemini_model" {
   description = "Gemini model id used by the AI planner."
   type        = string
-  default     = "gemini-flash-latest"
+  default     = "gemini-3.8-flash"
 }
