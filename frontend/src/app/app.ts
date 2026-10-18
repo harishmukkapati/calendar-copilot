@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 
 import { MonthView } from './calendar/month-view';
 import { CalendarStore } from './core/calendar-store';
@@ -27,6 +36,7 @@ export class App {
   protected readonly viewDate = signal(startOfMonth(new Date()));
   protected readonly modal = signal<ModalState | null>(null);
   protected readonly sidebarOpen = signal(false);
+  private readonly toast = viewChild.required<ElementRef<HTMLElement>>('toast');
 
   /** Wrapping the modal in a keyed list recreates it when switching between items. */
   protected readonly modals = computed(() => {
@@ -41,12 +51,18 @@ export class App {
   constructor() {
     this.store.load();
 
-    // Auto-dismiss error toasts.
+    // Show the toast above everything (including modals) and auto-dismiss it.
     effect((onCleanup) => {
-      if (this.store.error()) {
-        const timer = setTimeout(() => this.store.dismissError(), 5000);
-        onCleanup(() => clearTimeout(timer));
+      const el = this.toast().nativeElement;
+      const open = el.matches(':popover-open');
+      if (!this.store.error()) {
+        if (open) el.hidePopover();
+        return;
       }
+      if (open) el.hidePopover(); // re-show so it moves above a dialog opened later
+      el.showPopover();
+      const timer = setTimeout(() => this.store.dismissError(), 5000);
+      onCleanup(() => clearTimeout(timer));
     });
   }
 

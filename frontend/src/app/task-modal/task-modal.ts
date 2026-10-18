@@ -16,7 +16,8 @@ import { inputChecked, inputValue } from '../core/dom';
 import { Icon } from '../core/icon';
 import { ModalDialog } from '../core/modal-dialog';
 import { Task, UpdateTaskRequest } from '../core/models';
-import { SubtaskTree } from './subtask-tree';
+import { AiPlanner } from '../ai-planner/ai-planner';
+import { MAX_TASK_DEPTH, SubtaskTree } from './subtask-tree';
 
 const DEFAULT_DUE_TIME = '23:59';
 
@@ -26,7 +27,7 @@ const DEFAULT_DUE_TIME = '23:59';
  */
 @Component({
   selector: 'app-task-modal',
-  imports: [Icon, ModalDialog, SubtaskTree],
+  imports: [Icon, ModalDialog, SubtaskTree, AiPlanner],
   templateUrl: './task-modal.html',
   styleUrl: './task-modal.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -72,6 +73,14 @@ export class TaskModal implements OnInit {
   });
   protected readonly titleError = computed(() => this.submitted() && !this.title().trim());
 
+  /** Shows the AI planner in place of the manual subtask editor. */
+  protected readonly aiMode = signal(false);
+  /** The plan adds two levels below the task, so only tasks with room for them can be broken down. */
+  protected readonly canUseAi = computed(() => !this.isEdit() || this.ancestors().length + 3 <= MAX_TASK_DEPTH);
+  protected readonly dueIso = computed(() =>
+    this.date() ? toOffsetIso(combineDateTime(this.date(), this.time() || DEFAULT_DUE_TIME)) : null,
+  );
+
   ngOnInit(): void {
     const task = this.task();
     if (task) {
@@ -109,13 +118,16 @@ export class TaskModal implements OnInit {
   }
 
   protected async save(): Promise<void> {
+    if (this.aiMode()) {
+      return; // Enter inside the planner must not save the task without its plan
+    }
     this.submitted.set(true);
     const title = this.title().trim();
     if (!title || this.saving()) {
       return;
     }
     this.saving.set(true);
-    const dueAt = this.date() ? toOffsetIso(combineDateTime(this.date(), this.time() || DEFAULT_DUE_TIME)) : null;
+    const dueAt = this.dueIso();
     const ok = this.isEdit() ? await this.saveEdit(title, dueAt) : await this.saveNew(title, dueAt);
     this.saving.set(false);
     if (ok) {

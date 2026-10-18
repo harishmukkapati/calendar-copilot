@@ -6,6 +6,7 @@ import { dayKeyOf } from './date-utils';
 import {
   CalendarEvent,
   CreateEventRequest,
+  CreatePlanRequest,
   CreateTaskRequest,
   ProblemDetail,
   Task,
@@ -141,6 +142,18 @@ export class CalendarStore {
       return task;
     } catch (e) {
       this.reportError(e, 'Could not create the task.');
+      return null;
+    }
+  }
+
+  /** Saves a reviewed AI plan (one server transaction) and adds the new tasks locally. */
+  async confirmPlan(request: CreatePlanRequest): Promise<Task[] | null> {
+    try {
+      const created = await this.api.confirmPlan(request);
+      this.tasks.update((list) => [...list, ...created]);
+      return created;
+    } catch (e) {
+      this.reportError(e, 'Could not save the plan.');
       return null;
     }
   }
@@ -316,15 +329,24 @@ export class CalendarStore {
     return ids;
   }
 
-  private reportError(e: unknown, fallback: string): void {
+  reportError(e: unknown, fallback: string): void {
+    this.error.set(CalendarStore.messageFor(e, fallback));
+  }
+
+  /** User-facing message for an API error (problem detail when the server sent one). */
+  static messageFor(e: unknown, fallback: string): string {
     const problem = e instanceof HttpErrorResponse ? (e.error as ProblemDetail | null) : null;
-    const fieldError = problem?.errors ? Object.entries(problem.errors)[0] : undefined;
-    const message = fieldError
-      ? `${capitalize(fieldError[0])} ${fieldError[1]}.`
-      : problem?.detail && problem.status < 500
-        ? problem.detail
-        : fallback;
-    this.error.set(message);
+    if (problem?.errors) {
+      const [field, message] = Object.entries(problem.errors)[0];
+      return `${capitalize(field)} ${message}.`;
+    }
+    if (problem?.detail && (problem.status < 500 || [502, 503, 504].includes(problem.status))) {
+      return problem.detail;
+    }
+    if (e instanceof HttpErrorResponse && e.status === 0) {
+      return 'Network error. Check your connection and try again.';
+    }
+    return fallback;
   }
 }
 

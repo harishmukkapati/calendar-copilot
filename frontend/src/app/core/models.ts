@@ -73,3 +73,56 @@ export interface ProblemDetail {
   detail?: string;
   errors?: Record<string, string>;
 }
+
+// ---- AI planner ----
+
+export type DocumentCategory = 'INSTRUCTIONS' | 'RUBRIC' | 'SUPPORTING';
+export type Basis = 'SOURCE' | 'SUGGESTED';
+/** VERIFIED: quote found in the document. NOT_FOUND: possible hallucination. UNVERIFIABLE: image/scan. */
+export type Verification = 'VERIFIED' | 'NOT_FOUND' | 'UNVERIFIABLE';
+
+export interface PlanRequirement {
+  id: string;
+  text: string;
+  documentId: string | null;
+  documentName: string | null;
+  quote: string | null;
+  verification: Verification;
+}
+
+export interface DraftSubtask {
+  title: string;
+  basis: Basis;
+  requirementIds: string[];
+}
+
+export interface DraftTask {
+  title: string;
+  description: string | null;
+  basis: Basis;
+  requirementIds: string[];
+  dueAt: string | null;
+  subtasks: DraftSubtask[];
+}
+
+export interface PlanDraft {
+  summary: string | null;
+  requirements: PlanRequirement[];
+  tasks: DraftTask[];
+  uncertainties: string[];
+  documents: { id: string; name: string; category: DocumentCategory; kind: string; truncated: boolean }[];
+  model: string;
+}
+
+export interface CreatePlanRequest {
+  parentTaskId?: number;
+  title?: string;
+  description?: string | null;
+  dueAt?: string | null;
+  tasks: {
+    title: string;
+    description?: string | null;
+    dueAt?: string | null;
+    subtasks: { title: string; description?: string | null }[];
+  }[];
+}

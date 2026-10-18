@@ -1,10 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 
 import {
   CalendarEvent,
   CreateEventRequest,
+  CreatePlanRequest,
+  PlanDraft,
   CreateTaskRequest,
   Task,
   UpdateEventRequest,
@@ -46,5 +48,14 @@ export class ApiService {
 
   deleteEvent(id: number): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`/api/events/${id}`));
+  }
+
+  /** Observable (not a promise) so the caller can cancel a slow generation by unsubscribing. */
+  generatePlan(form: FormData): Observable<PlanDraft> {
+    return this.http.post<PlanDraft>('/api/ai/generate-plan', form);
+  }
+
+  confirmPlan(request: CreatePlanRequest): Promise<Task[]> {
+    return firstValueFrom(this.http.post<Task[]>('/api/ai/confirm-plan', request));
   }
 }

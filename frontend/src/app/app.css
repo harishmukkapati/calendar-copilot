@@ -70,10 +70,11 @@
 }
 .toast {
   position: fixed;
-  left: 50%;
-  bottom: 24px;
+  inset: auto auto 24px 50%;
+  margin: 0;
+  border: none;
   z-index: 50;
-  display: flex;
+  display: none;
   align-items: center;
   gap: 8px;
   max-width: calc(100vw - 32px);
@@ -83,6 +84,9 @@
   background: #1f2734;
   color: #fff;
   box-shadow: var(--shadow-lg);
+}
+.toast:popover-open {
+  display: flex;
 }
 .toast .icon-btn {
   color: #c9d2de;

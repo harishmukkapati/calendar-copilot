@@ -1,0 +1,229 @@
+<div class="planner" [attr.aria-busy]="phase() === 'generating' || phase() === 'saving'">
+  <div class="planner-head">
+    <app-icon name="sparkles" class="spark" />
+    <div>
+      <h3>Generate a task plan with AI</h3>
+      <p>Upload your assignment materials. The AI drafts steps; you review and edit them before anything is saved.</p>
+    </div>
+  </div>
+
+  @if (error(); as message) {
+    <p class="planner-error" role="alert">
+      <app-icon name="alert" />
+      {{ message }}
+    </p>
+  }
+
+  @switch (phase()) {
+    @case ('generating') {
+      <div class="progress" role="status" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <p class="stage">{{ stage() }}</p>
+        <p class="muted">Usually 5–20 seconds.</p>
+        <button class="btn" type="button" (click)="cancel()">Cancel</button>
+      </div>
+    }
+
+    @case ('input') {
+      <div class="slots">
+        @for (slot of slots; track slot.category) {
+          <div
+            class="slot"
+            [class.drag]="dragOver() === slot.category"
+            (dragover)="onDragOver(slot.category, $event)"
+            (dragleave)="dragOver.set(null)"
+            (drop)="onDrop(slot.category, $event)"
+          >
+            <div class="slot-label">
+              <span class="label">{{ slot.label }}</span>
+              <span class="hint">{{ slot.hint }}</span>
+            </div>
+            <label class="pick">
+              <app-icon name="upload" />
+              <span>Add files</span>
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.png,.jpg,.jpeg,.txt,application/pdf,image/png,image/jpeg,text/plain"
+                [attr.aria-label]="'Upload ' + slot.label"
+                (change)="onPick(slot.category, $event)"
+              />
+            </label>
+            @if (files()[slot.category].length) {
+              <ul class="files">
+                @for (f of files()[slot.category]; track $index) {
+                  <li>
+                    <app-icon name="file" />
+                    <span class="fname">{{ f.name }}</span>
+                    <span class="fsize">{{ formatSize(f.size) }}</span>
+                    <button class="icon-btn xs" type="button" [attr.aria-label]="'Remove ' + f.name"
+                      (click)="removeFile(slot.category, $index)">
+                      <app-icon name="close" />
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="field">
+        <label for="ai-context">Additional context <span class="optional">(optional)</span></label>
+        <textarea id="ai-context" class="input" rows="2" maxlength="4000"
+          placeholder="e.g. I've already picked my topic; I can work weekday evenings."
+          [value]="context()" (input)="context.set(inputValue($event))"></textarea>
+      </div>
+
+      <p class="privacy">
+        PDF, PNG, JPEG or TXT, up to 5 MB each. Files are used for this request only and not stored.
+        Please don't upload personal or sensitive information.
+      </p>
+
+      <div class="planner-foot">
+        <button class="btn btn-ghost" type="button" (click)="back.emit()">
+          <app-icon name="arrowLeft" />
+          Back
+        </button>
+        <span class="spacer"></span>
+        <button class="btn btn-primary" type="button" (click)="generate()">
+          <app-icon name="sparkles" />
+          {{ fileCount() ? 'Generate plan' : 'Generate without files' }}
+        </button>
+      </div>
+    }
+
+    @default {
+      @if (draft(); as d) {
+        <div class="review">
+          @if (d.summary) {
+            <p class="summary">{{ d.summary }}</p>
+          }
+
+          @if (d.requirements.length) {
+            <section class="requirements" aria-labelledby="req-heading">
+              <h4 id="req-heading">What your materials require</h4>
+              <ul>
+                @for (r of d.requirements; track r.id) {
+                  <li>
+                    <details [class]="'req ' + r.verification.toLowerCase()">
+                      <summary>
+                        <span class="req-id">{{ r.id }}</span>
+                        <span class="req-text">{{ r.text }}</span>
+                        <span class="verify">
+                          <app-icon [name]="r.verification === 'VERIFIED' ? 'checkCircle' : 'alert'" />
+                          {{ verificationLabel(r) }}
+                        </span>
+                      </summary>
+                      @if (r.quote) {
+                        <blockquote>
+                          “{{ r.quote }}”
+                          @if (r.documentName) {
+                            <cite>{{ r.documentName }}</cite>
+                          }
+                        </blockquote>
+                      }
+                    </details>
+                  </li>
+                }
+              </ul>
+            </section>
+          } @else if (d.documents.length === 0) {
+            <p class="note">No files were uploaded, so every step below is a suggestion rather than a requirement.</p>
+          }
+
+          @if (d.uncertainties.length) {
+            <section class="uncertain" aria-labelledby="unc-heading">
+              <h4 id="unc-heading">Things to double-check</h4>
+              <ul>
+                @for (u of d.uncertainties; track $index) {
+                  <li>{{ u }}</li>
+                }
+              </ul>
+            </section>
+          }
+
+          <section aria-labelledby="draft-heading">
+            <h4 id="draft-heading" class="draft-heading">
+              Draft plan <span class="badge-draft">AI Draft</span>
+              <span class="muted">Edit, remove or add steps, then confirm.</span>
+            </h4>
+            <ol class="draft-list">
+              @for (t of tasks(); track t.key; let i = $index) {
+                <li class="draft-task">
+                  <div class="draft-row">
+                    <span class="num">{{ i + 1 }}</span>
+                    <input class="draft-input title" maxlength="200" [attr.aria-label]="'Task ' + (i + 1) + ' title'"
+                      placeholder="Task title" [value]="t.title" (input)="updateTask(t.key, { title: inputValue($event) })" />
+                    <span class="basis" [class.source]="t.basis === 'SOURCE'">{{ basisLabel(t.basis) }}</span>
+                    <input class="draft-date" type="date" [attr.aria-label]="'Task ' + (i + 1) + ' due date'"
+                      [value]="t.dueDate" (input)="updateTask(t.key, { dueDate: inputValue($event) })" />
+                    <button class="icon-btn xs" type="button" [attr.aria-label]="'Remove task ' + (i + 1)"
+                      (click)="removeTask(t.key)">
+                      <app-icon name="trash" />
+                    </button>
+                  </div>
+                  @if (t.description || t.requirementIds.length) {
+                    <div class="draft-meta">
+                      @for (id of t.requirementIds; track id) {
+                        <span class="req-chip" [title]="requirementTooltip(id)">{{ id }}</span>
+                      }
+                      @if (t.description) {
+                        <span class="desc">{{ t.description }}</span>
+                      }
+                    </div>
+                  }
+                  <ul class="draft-subtasks">
+                    @for (s of t.subtasks; track s.key) {
+                      <li>
+                        <span class="sub-dot"></span>
+                        <input class="draft-input" maxlength="200" placeholder="Step" [attr.aria-label]="'Step of task ' + (i + 1)"
+                          [value]="s.title" (input)="updateSubtask(t.key, s.key, { title: inputValue($event) })" />
+                        @for (id of s.requirementIds; track id) {
+                          <span class="req-chip" [title]="requirementTooltip(id)">{{ id }}</span>
+                        }
+                        @if (s.basis === 'SOURCE') {
+                          <span class="basis source sm">From your files</span>
+                        }
+                        <button class="icon-btn xs" type="button" aria-label="Remove step"
+                          (click)="removeSubtask(t.key, s.key)">
+                          <app-icon name="close" />
+                        </button>
+                      </li>
+                    }
+                    @if (t.subtasks.length < maxSubtasks) {
+                      <li>
+                        <button class="add-link" type="button" (click)="addSubtask(t.key)">
+                          <app-icon name="plus" /> Add step
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                </li>
+              }
+            </ol>
+            @if (tasks().length < maxTasks) {
+              <button class="add-link task-add" type="button" (click)="addTask()">
+                <app-icon name="plus" /> Add task
+              </button>
+            }
+          </section>
+        </div>
+
+        <div class="planner-foot">
+          <button class="btn btn-ghost" type="button" [disabled]="phase() === 'saving'" (click)="startOver()">
+            <app-icon name="arrowLeft" />
+            Start over
+          </button>
+          <span class="saved-note">Nothing is saved until you confirm.</span>
+          <span class="spacer"></span>
+          <button class="btn" type="button" [disabled]="phase() === 'saving'" (click)="back.emit()">Discard</button>
+          <button class="btn btn-primary" type="button" [disabled]="phase() === 'saving' || itemCount() === 0"
+            (click)="confirm()">
+            {{ phase() === 'saving' ? 'Saving…' : 'Confirm and save ' + itemCount() + ' items' }}
+          </button>
+        </div>
+      }
+    }
+  }
+</div>

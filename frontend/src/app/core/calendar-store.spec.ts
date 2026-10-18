@@ -137,6 +137,19 @@ describe('CalendarStore', () => {
     expect(store.error()).toBe('Title must not be blank.');
   });
 
+  it('adds confirmed plan tasks to the calendar', async () => {
+    store.tasks.set([task({ id: 1 })]);
+
+    const result = store.confirmPlan({ title: 'Paper', tasks: [{ title: 'Step', subtasks: [] }] });
+    http.expectOne({ method: 'POST', url: '/api/ai/confirm-plan' }).flush([
+      task({ id: 10, title: 'Paper' }),
+      task({ id: 11, parentId: 10, title: 'Step', origin: 'AI' }),
+    ]);
+
+    expect((await result)?.length).toBe(2);
+    expect(store.childrenOf().get(10)?.map((t) => t.title)).toEqual(['Step']);
+  });
+
   it('mirrors PATCH semantics for optimistic updates', () => {
     const before = task({ dueAt: '2026-10-20T12:00:00Z', description: 'Notes' });
 

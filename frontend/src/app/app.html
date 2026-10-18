@@ -84,11 +84,12 @@
   }
 }
 
-@if (store.error(); as message) {
-  <div class="toast" role="alert">
+<!-- A manual popover joins the top layer, so the toast shows above open modal dialogs. -->
+<div #toast class="toast" popover="manual" role="alert">
+  @if (store.error(); as message) {
     <span>{{ message }}</span>
     <button class="icon-btn" type="button" aria-label="Dismiss" (click)="store.dismissError()">
       <app-icon name="close" />
     </button>
-  </div>
-}
+  }
+</div>

@@ -220,6 +220,9 @@ dialog.modal {
   box-shadow: var(--shadow-lg);
   color: var(--text);
 }
+dialog.modal.wide {
+  width: min(760px, calc(100vw - 32px));
+}
 dialog.modal::backdrop {
   background: rgba(20, 30, 48, 0.32);
 }

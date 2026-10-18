@@ -1,4 +1,4 @@
-<dialog appModalDialog aria-labelledby="task-modal-heading" (closed)="closed.emit()">
+<dialog appModalDialog aria-labelledby="task-modal-heading" [class.wide]="aiMode()" (closed)="closed.emit()">
   <form class="body" (submit)="$event.preventDefault(); save()" novalidate>
     <header class="head">
       <div class="head-text">
@@ -70,6 +70,21 @@
             placeholder="Notes, links, requirements…" [value]="description()" (input)="description.set(inputValue($event))"></textarea>
         </div>
 
+        @if (aiMode()) {
+          <!-- Loaded on first use so the AI code is not in the initial bundle. -->
+          @defer (on immediate) {
+            <app-ai-planner
+              [title]="title()"
+              [description]="description()"
+              [dueAt]="dueIso()"
+              [parentTaskId]="isEdit() ? taskId() : null"
+              (saved)="close()"
+              (back)="aiMode.set(false)"
+            />
+          } @loading {
+            <p class="planner-loading">Loading the AI planner…</p>
+          }
+        } @else {
         <section class="subtasks" aria-labelledby="subtasks-heading">
           <h3 id="subtasks-heading" class="label">Subtasks</h3>
           @if (isEdit()) {
@@ -101,9 +116,20 @@
             </div>
           }
         </section>
+          @if (canUseAi()) {
+            <button class="ai-cta" type="button" (click)="aiMode.set(true)">
+              <app-icon name="sparkles" />
+              <span>
+                <strong>{{ isEdit() ? 'Break this task down with AI' : 'Generate task plan with AI' }}</strong>
+                <small>Optional. Upload instructions or a rubric and review the draft before saving.</small>
+              </span>
+            </button>
+          }
+        }
       </div>
     }
 
+    @if (!aiMode()) {
     <footer class="foot">
       @if (isEdit() && task()) {
         <button class="btn btn-danger" type="button" (click)="delete()">
@@ -127,5 +153,6 @@
         </button>
       }
     </footer>
+    }
   </form>
 </dialog>
