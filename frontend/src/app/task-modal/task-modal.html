@@ -1,0 +1,131 @@
+<dialog appModalDialog aria-labelledby="task-modal-heading" (closed)="closed.emit()">
+  <form class="body" (submit)="$event.preventDefault(); save()" novalidate>
+    <header class="head">
+      <div class="head-text">
+        @if (ancestors().length > 0) {
+          <nav class="crumbs" aria-label="Parent tasks">
+            @for (a of ancestors(); track a.id) {
+              <button type="button" class="crumb" (click)="openTask.emit(a.id)">{{ a.title }}</button>
+              <app-icon name="chevronRight" />
+            }
+          </nav>
+        }
+        <h2 id="task-modal-heading">
+          {{ isEdit() ? (ancestors().length ? 'Edit subtask' : 'Edit task') : 'New task' }}
+          @if (task()?.origin === 'AI') {
+            <span class="badge-ai" title="Created from an AI-generated plan that you confirmed">AI</span>
+          }
+        </h2>
+      </div>
+      <button class="icon-btn" type="button" aria-label="Close" (click)="close()">
+        <app-icon name="close" />
+      </button>
+    </header>
+
+    @if (isEdit() && !task()) {
+      <p class="missing">This task no longer exists.</p>
+    } @else {
+      <div class="fields">
+        <div class="field">
+          <label for="task-title">Title</label>
+          <input
+            id="task-title"
+            class="input title-input"
+            name="title"
+            maxlength="200"
+            autocomplete="off"
+            placeholder="e.g. Complete Philosophy Paper 4"
+            [class.invalid]="titleError()"
+            [attr.aria-invalid]="titleError()"
+            aria-describedby="task-title-error"
+            [value]="title()" (input)="title.set(inputValue($event))"
+            autofocus
+          />
+          @if (titleError()) {
+            <span id="task-title-error" class="error">Add a title.</span>
+          }
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="task-date">Due date</label>
+            <input id="task-date" class="input" type="date" name="date" [value]="date()" (input)="date.set(inputValue($event))" />
+          </div>
+          <div class="field">
+            <label for="task-time">Time</label>
+            <input id="task-time" class="input" type="time" name="time" placeholder="23:59" [value]="time()" (input)="time.set(inputValue($event))"
+              [disabled]="!date()" />
+          </div>
+          @if (isEdit()) {
+            <label class="completed">
+              <input type="checkbox" name="completed" [checked]="completed()" (change)="completed.set(inputChecked($event))" />
+              Completed
+            </label>
+          }
+        </div>
+
+        <div class="field">
+          <label for="task-description">Description</label>
+          <textarea id="task-description" class="input" name="description" rows="3" maxlength="5000"
+            placeholder="Notes, links, requirements…" [value]="description()" (input)="description.set(inputValue($event))"></textarea>
+        </div>
+
+        <section class="subtasks" aria-labelledby="subtasks-heading">
+          <h3 id="subtasks-heading" class="label">Subtasks</h3>
+          @if (isEdit()) {
+            <app-subtask-tree [parentId]="taskId()!" (openTask)="openTask.emit($event)" />
+          } @else {
+            <ul class="draft-list">
+              @for (s of draftSubtasks(); track $index) {
+                <li>
+                  <span class="draft-dot"></span>
+                  <span class="draft-title">{{ s }}</span>
+                  <button class="icon-btn sm" type="button" [attr.aria-label]="'Remove ' + s"
+                    (click)="removeDraftSubtask($index)">
+                    <app-icon name="close" />
+                  </button>
+                </li>
+              }
+            </ul>
+            <div class="draft-add">
+              <app-icon name="plus" />
+              <input
+                class="draft-input"
+                name="newSubtask"
+                maxlength="200"
+                placeholder="Add a subtask and press Enter"
+                aria-label="New subtask title"
+                [value]="newSubtask()" (input)="newSubtask.set(inputValue($event))"
+                (keydown.enter)="addDraftSubtask($event)"
+              />
+            </div>
+          }
+        </section>
+      </div>
+    }
+
+    <footer class="foot">
+      @if (isEdit() && task()) {
+        <button class="btn btn-danger" type="button" (click)="delete()">
+          <app-icon name="trash" />
+          {{
+            confirmingDelete()
+              ? subtaskCount() > 0
+                ? 'Delete with ' + subtaskCount() + ' subtasks?'
+                : 'Confirm delete'
+              : 'Delete'
+          }}
+        </button>
+      } @else if (!isEdit()) {
+        <button class="btn btn-ghost switch" type="button" (click)="createEventInstead()">Create an event instead</button>
+      }
+      <span class="spacer"></span>
+      <button class="btn" type="button" (click)="close()">Cancel</button>
+      @if (!isEdit() || task()) {
+        <button class="btn btn-primary" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Save' }}
+        </button>
+      }
+    </footer>
+  </form>
+</dialog>

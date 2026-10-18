@@ -1,1 +1,236 @@
-/* You can add global styles to this file, and also import other style files */
+/* Design tokens. System font stack: no web-font download, so text paints immediately. */
+:root {
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --bg: #ffffff;
+  --surface: #f6f8fb;
+  --surface-hover: #eef2f7;
+  --border: #e2e7ee;
+  --border-strong: #cbd3de;
+  --text: #1d2734;
+  --text-2: #5b6878;
+  --text-3: #8a96a5;
+
+  --accent: #3b6fd8;
+  --accent-hover: #2f5fc4;
+  --accent-soft: #e9f0fd;
+  --accent-text: #1f4fae;
+  --danger: #c2413b;
+  --danger-soft: #fdeceb;
+  --success: #2f8f5b;
+
+  --ev-blue: #4a7fe0;
+  --ev-green: #2f9e6f;
+  --ev-purple: #7c5cd6;
+  --ev-orange: #db842a;
+  --ev-red: #d6504b;
+  --ev-gray: #7b8794;
+
+  --radius: 8px;
+  --radius-lg: 14px;
+  --shadow-lg: 0 18px 50px rgba(20, 33, 61, 0.18), 0 2px 8px rgba(20, 33, 61, 0.08);
+  --shadow-sm: 0 1px 2px rgba(20, 33, 61, 0.08);
+  --focus: 0 0 0 3px rgba(59, 111, 216, 0.28);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+/* Shared controls */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  font-weight: 500;
+  transition: background 0.12s, border-color 0.12s;
+}
+.btn:hover {
+  background: var(--surface-hover);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+.btn-danger {
+  color: var(--danger);
+  border-color: transparent;
+  background: transparent;
+}
+.btn-danger:hover {
+  background: var(--danger-soft);
+}
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+}
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-2);
+}
+.icon-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.field label,
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+textarea.input {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: var(--focus);
+  outline: none;
+}
+
+/* Round completion checkbox used for tasks everywhere */
+.check {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-3);
+  background: var(--bg);
+  color: #fff;
+}
+.check app-icon {
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+}
+.check:hover {
+  border-color: var(--accent);
+}
+.check.done {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.check.done app-icon {
+  opacity: 1;
+}
+
+.badge-ai {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Native <dialog> modals: focus trap, Escape and backdrop come from the browser. */
+dialog.modal {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  color: var(--text);
+}
+dialog.modal::backdrop {
+  background: rgba(20, 30, 48, 0.32);
+}
+@media (prefers-reduced-motion: no-preference) {
+  dialog.modal[open] {
+    animation: modal-in 0.16s ease-out;
+  }
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}

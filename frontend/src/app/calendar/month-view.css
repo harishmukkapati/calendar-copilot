@@ -1,0 +1,235 @@
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+.month {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-top: 1px solid var(--border);
+}
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--border);
+}
+.weekday {
+  padding: 6px 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.weeks {
+  flex: 1;
+  display: grid;
+  min-height: 0;
+}
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  min-height: 0;
+  border-bottom: 1px solid var(--border);
+}
+.week:last-child {
+  border-bottom: none;
+}
+.day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 96px;
+  padding: 4px 4px 6px;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.day:last-child {
+  border-right: none;
+}
+.day:hover {
+  background: var(--surface);
+}
+.day.outside .day-number {
+  color: var(--text-3);
+}
+.day-number {
+  align-self: center;
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  margin-bottom: 2px;
+  padding: 0 4px;
+  border: none;
+  border-radius: 13px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.day-number:hover {
+  background: var(--surface-hover);
+}
+.day.today .day-number {
+  background: var(--accent);
+  color: #fff;
+}
+
+.items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  font-size: 12px;
+  text-align: left;
+}
+.chip .title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.chip.event:hover,
+.chip.task:hover {
+  background: var(--surface-hover);
+}
+.chip.event .dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ev-color, var(--ev-blue));
+}
+.chip.event .time {
+  flex: none;
+  color: var(--text-2);
+}
+.chip.event[data-color='blue'] { --ev-color: var(--ev-blue); }
+.chip.event[data-color='green'] { --ev-color: var(--ev-green); }
+.chip.event[data-color='purple'] { --ev-color: var(--ev-purple); }
+.chip.event[data-color='orange'] { --ev-color: var(--ev-orange); }
+.chip.event[data-color='red'] { --ev-color: var(--ev-red); }
+.chip.event[data-color='gray'] { --ev-color: var(--ev-gray); }
+
+/* Tasks: tinted pill with a completion circle, so they read differently from events */
+.chip.task {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: 500;
+  padding-left: 4px;
+}
+.chip.task:hover {
+  background: #dce7fb;
+}
+.chip.task.subtask {
+  background: transparent;
+  color: var(--text);
+  font-weight: 400;
+}
+.chip.task.done .title {
+  text-decoration: line-through;
+  color: var(--text-3);
+}
+.chip.task .check {
+  width: 14px;
+  height: 14px;
+}
+.task-open {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.progress {
+  flex: none;
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.more {
+  align-self: flex-start;
+  margin-top: 1px;
+  padding: 1px 6px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.more:hover {
+  background: var(--surface-hover);
+}
+
+.overflow {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: -8px;
+  right: -8px;
+  min-width: 220px;
+  padding: 8px;
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  cursor: default;
+}
+.overflow-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  padding-left: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+@media (max-width: 720px) {
+  .day {
+    min-height: 72px;
+    padding: 2px 1px 4px;
+  }
+  .chip {
+    height: 18px;
+    padding: 0 3px;
+    font-size: 11px;
+  }
+  .chip.event .time,
+  .chip.event .dot,
+  .progress {
+    display: none;
+  }
+  .chip.task .check {
+    display: none;
+  }
+}

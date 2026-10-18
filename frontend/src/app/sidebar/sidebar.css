@@ -1,0 +1,137 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  height: 100%;
+  padding: 14px 12px 12px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 8px;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.logo {
+  width: 28px;
+  height: 28px;
+}
+.create {
+  display: flex;
+  gap: 6px;
+}
+.create-btn {
+  height: 44px;
+  padding: 0 18px 0 14px;
+  border-radius: 16px;
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm), 0 1px 6px rgba(20, 33, 61, 0.08);
+  font-size: 14px;
+}
+.create-btn app-icon {
+  color: var(--accent);
+}
+.create .btn-ghost {
+  height: 44px;
+  color: var(--text-2);
+}
+
+.my-tasks h2 {
+  margin: 0 0 6px;
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.my-tasks ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.my-tasks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--radius);
+}
+.my-tasks li:hover {
+  background: var(--surface);
+}
+.my-tasks .check {
+  margin-top: 2px;
+}
+.task-link {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+}
+.task-link .title {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+}
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+.overdue {
+  color: var(--danger);
+}
+.progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.bar {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+.bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.empty,
+.completed {
+  margin: 4px 8px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.demo-note {
+  margin-top: auto;
+  padding: 10px 8px 0;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.demo-note p {
+  margin: 0 0 6px;
+}
+.reset {
+  height: 30px;
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.reset app-icon {
+  width: 14px;
+  height: 14px;
+}

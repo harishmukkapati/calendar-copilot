@@ -1,0 +1,77 @@
+<dialog appModalDialog aria-labelledby="event-modal-heading" (closed)="closed.emit()">
+  <form class="body" (submit)="$event.preventDefault(); save()" novalidate>
+    <header class="head">
+      <h2 id="event-modal-heading">{{ isEdit() ? 'Edit event' : 'New event' }}</h2>
+      <button class="icon-btn" type="button" aria-label="Close" (click)="close()">
+        <app-icon name="close" />
+      </button>
+    </header>
+
+    @if (isEdit() && !event()) {
+      <p class="missing">This event no longer exists.</p>
+    } @else {
+      <div class="fields">
+        <div class="field">
+          <label for="event-title">Title</label>
+          <input id="event-title" class="input title-input" name="title" maxlength="200" autocomplete="off"
+            placeholder="e.g. Team project meeting" [class.invalid]="titleError()" [attr.aria-invalid]="titleError()"
+            [value]="title()" (input)="title.set(inputValue($event))" autofocus />
+          @if (titleError()) {
+            <span class="error">Add a title.</span>
+          }
+        </div>
+
+        <div class="row">
+          <div class="field grow">
+            <label for="event-date">Date</label>
+            <input id="event-date" class="input" type="date" name="date" required [value]="date()" (input)="date.set(inputValue($event))" />
+          </div>
+          <div class="field">
+            <label for="event-start">Start</label>
+            <input id="event-start" class="input" type="time" name="start" required [value]="start()" (input)="start.set(inputValue($event))" />
+          </div>
+          <div class="field">
+            <label for="event-end">End</label>
+            <input id="event-end" class="input" type="time" name="end" required [class.invalid]="timeError()"
+              [value]="end()" (input)="end.set(inputValue($event))" />
+          </div>
+        </div>
+        @if (timeError()) {
+          <span class="error">End time must be after the start time.</span>
+        }
+
+        <fieldset class="colors">
+          <legend class="label">Color</legend>
+          @for (c of colors; track c) {
+            <label class="swatch" [attr.data-color]="c" [title]="c">
+              <input type="radio" name="color" [value]="c" [checked]="color() === c" (change)="color.set(c)"
+                [attr.aria-label]="c" />
+            </label>
+          }
+        </fieldset>
+
+        <div class="field">
+          <label for="event-description">Description</label>
+          <textarea id="event-description" class="input" name="description" rows="2" maxlength="5000"
+            [value]="description()" (input)="description.set(inputValue($event))"></textarea>
+        </div>
+      </div>
+    }
+
+    <footer class="foot">
+      @if (isEdit() && event()) {
+        <button class="btn btn-danger" type="button" (click)="delete()">
+          <app-icon name="trash" />
+          {{ confirmingDelete() ? 'Confirm delete' : 'Delete' }}
+        </button>
+      } @else if (!isEdit()) {
+        <button class="btn btn-ghost switch" type="button" (click)="switchToTask.emit(date())">Create a task instead</button>
+      }
+      <span class="spacer"></span>
+      <button class="btn" type="button" (click)="close()">Cancel</button>
+      @if (!isEdit() || event()) {
+        <button class="btn btn-primary" type="submit" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+      }
+    </footer>
+  </form>
+</dialog>

@@ -1,0 +1,93 @@
+<div class="month" role="grid" aria-label="Month calendar">
+  <div class="weekdays" role="row">
+    @for (name of weekdays; track name) {
+      <div class="weekday" role="columnheader">{{ name }}</div>
+    }
+  </div>
+
+  <div class="weeks" [style.grid-template-rows]="'repeat(' + weeks().length + ', minmax(0, 1fr))'">
+    @for (week of weeks(); track week[0].key) {
+      <div class="week" role="row">
+        @for (cell of week; track cell.key) {
+          <div
+            class="day"
+            role="gridcell"
+            [class.outside]="!cell.inMonth"
+            [class.today]="cell.isToday"
+            (click)="openDay(cell.key)"
+          >
+            <button
+              class="day-number"
+              type="button"
+              [attr.aria-label]="'Create task on ' + dayLabel(cell)"
+              (click)="openDay(cell.key); $event.stopPropagation()"
+            >
+              {{ cell.date.getDate() }}
+            </button>
+
+            <ul class="items">
+              <ng-container
+                *ngTemplateOutlet="items; context: { $implicit: cell, all: false }"
+              ></ng-container>
+            </ul>
+
+            @if (cell.hidden > 0) {
+              <button class="more" type="button" (click)="toggleOverflow(cell.key, $event)">
+                {{ cell.hidden }} more
+              </button>
+            }
+
+            @if (expandedDay() === cell.key) {
+              <div class="overflow" role="dialog" [attr.aria-label]="dayLabel(cell)" (click)="$event.stopPropagation()">
+                <div class="overflow-head">
+                  <span>{{ dayLabel(cell) }}</span>
+                  <button class="icon-btn" type="button" aria-label="Close" (click)="expandedDay.set(null)">
+                    <app-icon name="close" />
+                  </button>
+                </div>
+                <ul class="items">
+                  <ng-container
+                    *ngTemplateOutlet="items; context: { $implicit: cell, all: true }"
+                  ></ng-container>
+                </ul>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<ng-template #items let-cell let-all="all">
+  @for (ev of visibleEvents(cell, all); track ev.id) {
+    <li>
+      <button class="chip event" type="button" [attr.data-color]="ev.color" (click)="openEvent(ev.id, $event)">
+        <span class="dot"></span>
+        <span class="time">{{ formatTime(ev.startAt) }}</span>
+        <span class="title">{{ ev.title }}</span>
+      </button>
+    </li>
+  }
+  @for (task of visibleTasks(cell, all); track task.id) {
+    <li>
+      <div class="chip task" [class.done]="task.status === 'DONE'" [class.subtask]="task.parentId != null">
+        <button
+          class="check"
+          type="button"
+          [class.done]="task.status === 'DONE'"
+          [attr.aria-label]="(task.status === 'DONE' ? 'Mark incomplete: ' : 'Mark complete: ') + task.title"
+          (click)="toggleTask(task, $event)"
+        >
+          <app-icon name="check" [strokeWidth]="3.5" />
+        </button>
+        <button class="task-open" type="button" [title]="task.title" (click)="openTask(task.id, $event)">
+          <span class="title">{{ task.title }}</span>
+          @if (store.progress().get(task.id); as p) {
+            <span class="progress">{{ p.done }}/{{ p.total }}</span>
+          }
+        </button>
+      </div>
+    </li>
+  }
+</ng-template>

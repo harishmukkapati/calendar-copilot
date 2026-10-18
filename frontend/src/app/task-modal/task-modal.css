@@ -1,0 +1,174 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+}
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 18px 16px 4px 22px;
+}
+.head-text {
+  flex: 1;
+  min-width: 0;
+}
+.head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.crumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.crumbs app-icon {
+  width: 12px;
+  height: 12px;
+}
+.crumb {
+  max-width: 220px;
+  padding: 2px 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent-text);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.crumb:hover {
+  background: var(--accent-soft);
+}
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 22px 8px;
+  overflow-y: auto;
+}
+.title-input {
+  height: 42px;
+  font-size: 16px;
+}
+.input.invalid {
+  border-color: var(--danger);
+}
+.error {
+  font-size: 12px;
+  color: var(--danger);
+}
+.row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+.row .field {
+  flex: 1;
+}
+.completed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.completed input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+.subtasks .label {
+  margin: 0 0 4px;
+}
+.draft-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.draft-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  padding: 0 4px 0 8px;
+  border-radius: var(--radius);
+}
+.draft-list li:hover {
+  background: var(--surface);
+}
+.draft-dot {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--text-3);
+  border-radius: 50%;
+}
+.draft-title {
+  flex: 1;
+}
+.icon-btn.sm {
+  width: 28px;
+  height: 28px;
+}
+.icon-btn.sm app-icon {
+  width: 14px;
+  height: 14px;
+}
+.draft-add {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  color: var(--text-3);
+}
+.draft-add app-icon {
+  width: 15px;
+  height: 15px;
+}
+.draft-input {
+  flex: 1;
+  height: 32px;
+  border: none;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+}
+.draft-input:focus {
+  outline: none;
+  box-shadow: none;
+  border-bottom-color: var(--accent);
+}
+.missing {
+  padding: 12px 22px;
+  color: var(--text-2);
+}
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--border);
+}
+.foot .spacer {
+  flex: 1;
+}
+.switch {
+  color: var(--text-2);
+  font-weight: 400;
+}
+@media (max-width: 520px) {
+  .row {
+    flex-wrap: wrap;
+  }
+  .switch {
+    display: none;
+  }
+}

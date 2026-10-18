@@ -1,0 +1,76 @@
+<div class="brand">
+  <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+    <rect x="3" y="5" width="26" height="24" rx="5" fill="#3b6fd8" />
+    <rect x="3" y="5" width="26" height="7" rx="3" fill="#2c57b0" />
+    <path d="M10 20l4 4 8-9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+  <span>Calendar Copilot</span>
+</div>
+
+<div class="create">
+  <button class="btn create-btn" type="button" (click)="createTask.emit()">
+    <app-icon name="plus" [strokeWidth]="2.5" />
+    Create task
+  </button>
+  <button class="btn btn-ghost" type="button" (click)="createEvent.emit()">Event</button>
+</div>
+
+<app-mini-calendar
+  [viewDate]="viewDate()"
+  (viewDateChange)="viewDateChange.emit($event)"
+  (daySelect)="viewDateChange.emit($event)"
+/>
+
+<section class="my-tasks" aria-labelledby="my-tasks-heading">
+  <h2 id="my-tasks-heading">My tasks</h2>
+  @if (openTasks().length === 0) {
+    <p class="empty">Nothing left to do. Create a task to get started.</p>
+  }
+  <ul>
+    @for (task of openTasks(); track task.id) {
+      <li>
+        <button
+          class="check"
+          type="button"
+          [attr.aria-label]="'Mark complete: ' + task.title"
+          (click)="store.toggleComplete(task)"
+        >
+          <app-icon name="check" [strokeWidth]="3.5" />
+        </button>
+        <button class="task-link" type="button" (click)="openTask.emit(task.id)">
+          <span class="title">{{ task.title }}</span>
+          <span class="meta">
+            @if (task.dueAt) {
+              <span [class.overdue]="isOverdue(task)">{{ formatDueDate(task.dueAt) }}</span>
+            } @else {
+              <span>No date</span>
+            }
+            @if (store.progress().get(task.id); as p) {
+              <span class="progress">
+                <span class="bar"><span [style.width.%]="(p.done / p.total) * 100"></span></span>
+                {{ p.done }}/{{ p.total }}
+              </span>
+            }
+            @if (task.origin === 'AI') {
+              <span class="badge-ai">AI</span>
+            }
+          </span>
+        </button>
+      </li>
+    }
+  </ul>
+  @if (completedCount() > 0) {
+    <p class="completed">{{ completedCount() }} completed</p>
+  }
+</section>
+
+<footer class="demo-note">
+  <p>
+    Demo workspace. Your changes are private to this browser and are removed after 7 days of inactivity.
+    Please don't enter personal information.
+  </p>
+  <button class="btn btn-ghost reset" type="button" (click)="resetDemo.emit()">
+    <app-icon name="refresh" />
+    Reset demo data
+  </button>
+</footer>
