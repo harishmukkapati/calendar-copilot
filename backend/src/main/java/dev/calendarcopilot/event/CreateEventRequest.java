@@ -12,5 +12,6 @@ public record CreateEventRequest(
         @Size(max = 5000) String description,
         @NotNull OffsetDateTime startAt,
         @NotNull OffsetDateTime endAt,
-        @Pattern(regexp = EventColors.PATTERN) String color) {
+        @Pattern(regexp = EventColors.PATTERN) String color,
+        Boolean allDay) {
 }

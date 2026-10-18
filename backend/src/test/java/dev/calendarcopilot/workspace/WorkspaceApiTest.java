@@ -26,7 +26,8 @@ class WorkspaceApiTest extends ApiTestSupport {
                 .andExpect(jsonPath("$.length()").value(greaterThan(5)))
                 .andExpect(jsonPath("$[?(@.parentId != null)]").isNotEmpty());
         mvc.perform(get("/api/events").header(WORKSPACE, workspace))
-                .andExpect(jsonPath("$.length()").value(8));
+                .andExpect(jsonPath("$.length()").value(10))
+                .andExpect(jsonPath("$[?(@.title == 'Fall break')].allDay").value(org.hamcrest.Matchers.hasItem(true)));
     }
 
     @Test

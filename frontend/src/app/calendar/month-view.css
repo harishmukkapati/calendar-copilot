@@ -29,6 +29,7 @@
   min-height: 0;
 }
 .week {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   min-height: 0;
@@ -214,6 +215,65 @@
   color: var(--text-2);
 }
 
+/* All-day / multi-day bars: an overlay grid aligned with the day columns */
+.lane-space {
+  flex: none;
+}
+.bars {
+  position: absolute;
+  top: 32px; /* below the day numbers */
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  row-gap: 2px;
+  pointer-events: none; /* clicks between bars reach the day cells */
+}
+.bar {
+  min-width: 0;
+  height: 22px;
+  margin: 0 4px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 5px;
+  background: var(--ev-color, var(--ev-blue));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: auto;
+  cursor: grab;
+}
+.bar:hover {
+  filter: brightness(0.95);
+}
+.bar.cont-before {
+  margin-left: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.bar.cont-after {
+  margin-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.bar.dragging {
+  opacity: 0.4;
+}
+/* While dragging, let drag events pass through bars to the day cells underneath. */
+.month.is-dragging .bar {
+  pointer-events: none;
+}
+.bar[data-color='blue'] { --ev-color: var(--ev-blue); }
+.bar[data-color='green'] { --ev-color: var(--ev-green); }
+.bar[data-color='purple'] { --ev-color: var(--ev-purple); }
+.bar[data-color='orange'] { --ev-color: var(--ev-orange); }
+.bar[data-color='red'] { --ev-color: var(--ev-red); }
+.bar[data-color='gray'] { --ev-color: var(--ev-gray); }
+
 /* Drag and drop */
 .chip[draggable='true'] {
   cursor: grab;
@@ -230,6 +290,14 @@
 }
 
 @media (max-width: 720px) {
+  .bars {
+    top: 30px;
+  }
+  .bar {
+    height: 18px;
+    padding: 0 4px;
+    font-size: 11px;
+  }
   .day {
     min-height: 72px;
     padding: 2px 1px 4px;

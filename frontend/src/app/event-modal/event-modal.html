@@ -21,23 +21,45 @@
           }
         </div>
 
+        <label class="all-day">
+          <input type="checkbox" name="allDay" [checked]="allDay()" (change)="allDay.set(inputChecked($event))" />
+          All day
+        </label>
+
         <div class="row">
           <div class="field grow">
-            <label for="event-date">Date</label>
-            <input id="event-date" class="input" type="date" name="date" required [value]="date()" (input)="date.set(inputValue($event))" />
+            <label for="event-start-date">Starts</label>
+            <input id="event-start-date" class="input" type="date" name="startDate" required
+              [value]="startDate()" (input)="changeStartDate(inputValue($event))" />
           </div>
-          <div class="field">
-            <label for="event-start">Start</label>
-            <input id="event-start" class="input" type="time" name="start" required [value]="start()" (input)="start.set(inputValue($event))" />
-          </div>
-          <div class="field">
-            <label for="event-end">End</label>
-            <input id="event-end" class="input" type="time" name="end" required [class.invalid]="timeError()"
-              [value]="end()" (input)="end.set(inputValue($event))" />
-          </div>
+          @if (!allDay()) {
+            <div class="field">
+              <label for="event-start-time" class="sr-only">Start time</label>
+              <span class="label" aria-hidden="true">&nbsp;</span>
+              <input id="event-start-time" class="input" type="time" name="startTime" required
+                [value]="startTime()" (input)="startTime.set(inputValue($event))" />
+            </div>
+          }
         </div>
-        @if (timeError()) {
-          <span class="error">End time must be after the start time.</span>
+        <div class="row">
+          <div class="field grow">
+            <label for="event-end-date">Ends</label>
+            <input id="event-end-date" class="input" type="date" name="endDate" required [class.invalid]="!!rangeError()"
+              [value]="endDate()" (input)="endDate.set(inputValue($event))" />
+          </div>
+          @if (!allDay()) {
+            <div class="field">
+              <label for="event-end-time" class="sr-only">End time</label>
+              <span class="label" aria-hidden="true">&nbsp;</span>
+              <input id="event-end-time" class="input" type="time" name="endTime" required [class.invalid]="!!rangeError()"
+                [value]="endTime()" (input)="endTime.set(inputValue($event))" />
+            </div>
+          }
+        </div>
+        @if (rangeError(); as message) {
+          <span class="error" role="alert">{{ message }}</span>
+        } @else if (lengthLabel()) {
+          <span class="length">{{ lengthLabel() }}</span>
         }
 
         <fieldset class="colors">
@@ -65,7 +87,7 @@
           {{ confirmingDelete() ? 'Confirm delete' : 'Delete' }}
         </button>
       } @else if (!isEdit()) {
-        <button class="btn btn-ghost switch" type="button" (click)="switchToTask.emit(date())">Create a task instead</button>
+        <button class="btn btn-ghost switch" type="button" (click)="switchToTask.emit(startDate())">Create a task instead</button>
       }
       <span class="spacer"></span>
       <button class="btn" type="button" (click)="close()">Cancel</button>

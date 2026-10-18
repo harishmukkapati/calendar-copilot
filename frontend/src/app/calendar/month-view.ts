@@ -1,17 +1,21 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 
 import { CalendarStore } from '../core/calendar-store';
-import { dayKey, formatTime, isSameDay, monthGrid } from '../core/date-utils';
+import { addDaysToKey, dayKey, daysBetween, formatTime, isSameDay, monthGrid } from '../core/date-utils';
 import { Icon } from '../core/icon';
 import { CalendarEvent, Task } from '../core/models';
+import { Segment, eventRange, layoutWeek } from './event-layout';
 
+/** Rows of items a day cell shows before "N more" (bars + chips). */
 const MAX_VISIBLE_ITEMS = 3;
 
 /** What is being dragged. Kept in a signal because dataTransfer is unreadable during dragover. */
 interface DragItem {
   kind: 'task' | 'event';
   id: number;
+  /** For bars: which day of the event was grabbed, so that day lands on the drop target. */
+  grabOffset: number;
 }
 
 interface DayCell {
@@ -19,9 +23,21 @@ interface DayCell {
   key: string;
   inMonth: boolean;
   isToday: boolean;
+  /** All-day / multi-day events covering this day (shown in full in the overflow list). */
+  spanning: CalendarEvent[];
   events: CalendarEvent[];
   tasks: Task[];
+  /** How many single-day chips fit under the week's bars. */
+  chipBudget: number;
   hidden: number;
+}
+
+interface WeekRow {
+  key: string;
+  days: DayCell[];
+  /** Bars drawn in this week (only the visible lanes). */
+  segments: Segment[];
+  visibleLanes: number;
 }
 
 @Component({
@@ -48,14 +64,24 @@ export class MonthView {
   /** Read by screen readers after a drop. */
   protected readonly announcement = signal('');
 
-  protected readonly weeks = computed<DayCell[][]>(() => {
+  protected readonly weeks = computed<WeekRow[]>(() => {
     const view = this.viewDate();
     const today = new Date();
     const tasksByDay = this.store.tasksByDay();
     const eventsByDay = this.store.eventsByDay();
-    return monthGrid(view).map((week) =>
-      week.map((date) => {
-        const key = dayKey(date);
+    const spanning = this.store.spanningEvents();
+
+    return monthGrid(view).map((week) => {
+      const keys = week.map(dayKey);
+      const segments = layoutWeek(keys, spanning);
+      const totalLanes = segments.reduce((max, s) => Math.max(max, s.lane + 1), 0);
+      const visibleLanes = Math.min(totalLanes, MAX_VISIBLE_ITEMS);
+      const chipBudget = MAX_VISIBLE_ITEMS - visibleLanes;
+
+      const days = week.map((date, col) => {
+        const key = keys[col];
+        const covering = segments.filter((s) => s.startCol <= col && col <= s.endCol);
+        const hiddenBars = covering.filter((s) => s.lane >= visibleLanes).length;
         const events = eventsByDay.get(key) ?? [];
         const tasks = tasksByDay.get(key) ?? [];
         return {
@@ -63,25 +89,37 @@ export class MonthView {
           key,
           inMonth: date.getMonth() === view.getMonth(),
           isToday: isSameDay(date, today),
+          spanning: covering.map((s) => s.event),
           events,
           tasks,
-          hidden: Math.max(0, events.length + tasks.length - MAX_VISIBLE_ITEMS),
+          chipBudget,
+          hidden: hiddenBars + Math.max(0, events.length + tasks.length - chipBudget),
         };
-      }),
-    );
+      });
+      return { key: keys[0], days, segments: segments.filter((s) => s.lane < visibleLanes), visibleLanes };
+    });
   });
 
-  /** Events first (they are time-bound), then tasks, capped so cells keep a fixed height. */
+  /** Events first (they are time-bound), then tasks, within the space left under the bars. */
   protected visibleEvents(cell: DayCell, all = false): CalendarEvent[] {
-    return all ? cell.events : cell.events.slice(0, MAX_VISIBLE_ITEMS);
+    return all ? cell.events : cell.events.slice(0, cell.chipBudget);
   }
 
   protected visibleTasks(cell: DayCell, all = false): Task[] {
-    return all ? cell.tasks : cell.tasks.slice(0, Math.max(0, MAX_VISIBLE_ITEMS - cell.events.length));
+    return all ? cell.tasks : cell.tasks.slice(0, Math.max(0, cell.chipBudget - cell.events.length));
   }
 
-  protected parentTitle(task: Task): string | null {
-    return task.parentId != null ? (this.store.taskById().get(task.parentId)?.title ?? null) : null;
+  /** Label on a bar: the start time appears only where the event actually starts. */
+  protected barLabel(s: Segment): string {
+    const time = !s.event.allDay && !s.continuesBefore ? `${formatTime(s.event.startAt)} ` : '';
+    return time + s.event.title;
+  }
+
+  protected spanLabel(event: CalendarEvent): string {
+    if (event.allDay) {
+      return 'All day';
+    }
+    return `${formatTime(event.startAt)}–${formatTime(event.endAt)}`;
   }
 
   protected openDay(key: string): void {
@@ -118,14 +156,25 @@ export class MonthView {
     return item?.kind === kind && item.id === id;
   }
 
-  protected onDragStart(event: DragEvent, item: DragItem): void {
+  protected onDragStart(event: DragEvent, kind: DragItem['kind'], id: number, grabOffset = 0): void {
     event.stopPropagation();
-    this.dragging.set(item);
+    this.dragging.set({ kind, id, grabOffset });
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       // Some browsers only start a drag when data is set.
-      event.dataTransfer.setData('text/plain', `${item.kind}:${item.id}`);
+      event.dataTransfer.setData('text/plain', `${kind}:${id}`);
     }
+  }
+
+  /** Works out which day of a multi-day bar was grabbed from the pointer position. */
+  protected onBarDragStart(event: DragEvent, segment: Segment, week: WeekRow): void {
+    const bar = event.currentTarget as HTMLElement;
+    const rect = bar.getBoundingClientRect();
+    const columns = segment.endCol - segment.startCol + 1;
+    const col = Math.min(columns - 1, Math.max(0, Math.floor(((event.clientX - rect.left) / rect.width) * columns)));
+    const grabbedDay = week.days[segment.startCol + col].key;
+    const grabOffset = daysBetween(eventRange(segment.event).first, grabbedDay);
+    this.onDragStart(event, 'event', segment.event.id, grabOffset);
   }
 
   protected onDragOver(event: DragEvent, key: string): void {
@@ -154,18 +203,18 @@ export class MonthView {
     if (!item) {
       return;
     }
-    const day = this.dayLabel(cell);
     if (item.kind === 'task') {
       const task = this.store.taskById().get(item.id);
       if (task) {
         this.store.moveTask(task, cell.key);
-        this.announcement.set(`Moved ${task.title} to ${day}.`);
+        this.announcement.set(`Moved ${task.title} to ${this.dayLabel(cell)}.`);
       }
     } else {
       const ev = this.store.events().find((e) => e.id === item.id);
       if (ev) {
-        this.store.moveEvent(ev, cell.key);
-        this.announcement.set(`Moved ${ev.title} to ${day}.`);
+        const newStart = addDaysToKey(cell.key, -item.grabOffset);
+        this.store.moveEvent(ev, newStart);
+        this.announcement.set(`Moved ${ev.title} to start ${this.dayLabel({ date: new Date(newStart + 'T00:00') })}.`);
       }
     }
   }
@@ -176,7 +225,7 @@ export class MonthView {
     this.expandedDay.set(null);
   }
 
-  protected dayLabel(cell: DayCell): string {
+  protected dayLabel(cell: { date: Date }): string {
     return cell.date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
   }
 }

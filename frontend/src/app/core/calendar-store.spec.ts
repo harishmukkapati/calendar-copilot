@@ -172,7 +172,7 @@ describe('CalendarStore', () => {
     const start = new Date(2026, 9, 21, 15, 0);
     const end = new Date(2026, 9, 21, 16, 30);
     store.events.set([
-      { id: 8, title: 'Meeting', description: null, color: 'blue', startAt: start.toISOString(), endAt: end.toISOString(), createdAt: '', updatedAt: '' },
+      { id: 8, title: 'Meeting', description: null, color: 'blue', allDay: false, startAt: start.toISOString(), endAt: end.toISOString(), createdAt: '', updatedAt: '' },
     ]);
 
     expect(await store.moveEvent(store.events()[0], '2026-10-21')).toBe(true);
@@ -183,6 +183,24 @@ describe('CalendarStore', () => {
     expect(req.request.body.startAt).toMatch(/^2026-10-19T15:00:00/);
     expect(req.request.body.endAt).toMatch(/^2026-10-19T16:30:00/);
     expect(dayKeyOf(store.events()[0].startAt)).toBe('2026-10-19'); // optimistic
+    req.flush({ ...store.events()[0] });
+    expect(await result).toBe(true);
+  });
+
+  it('moves a multi-day event as a whole and marks every covered day as busy', async () => {
+    const start = new Date(2026, 9, 20, 18, 0); // Tue 6 pm
+    const end = new Date(2026, 9, 22, 14, 0); // Thu 2 pm
+    store.events.set([
+      { id: 9, title: 'Conference', description: null, color: 'purple', allDay: false, startAt: start.toISOString(), endAt: end.toISOString(), createdAt: '', updatedAt: '' },
+    ]);
+    expect(store.spanningEvents().map((e) => e.id)).toEqual([9]);
+    expect(store.eventsByDay().size).toBe(0); // not drawn as a single-day chip
+    expect(['2026-10-20', '2026-10-21', '2026-10-22'].every((d) => store.busyDays().has(d))).toBe(true);
+
+    const result = store.moveEvent(store.events()[0], '2026-10-27');
+    const req = http.expectOne({ method: 'PATCH', url: '/api/events/9' });
+    expect(req.request.body.startAt).toMatch(/^2026-10-27T18:00:00/);
+    expect(req.request.body.endAt).toMatch(/^2026-10-29T14:00:00/); // same 2-day length
     req.flush({ ...store.events()[0] });
     expect(await result).toBe(true);
   });

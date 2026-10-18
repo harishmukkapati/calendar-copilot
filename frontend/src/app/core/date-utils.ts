@@ -96,3 +96,13 @@ export function shiftDays(iso: string, days: number): Date {
   const d = new Date(iso);
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days, d.getHours(), d.getMinutes(), d.getSeconds());
 }
+
+/** Parses "YYYY-MM-DD" as a local date. */
+export function parseDayKey(key: string): Date {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+export function addDaysToKey(key: string, days: number): string {
+  return dayKey(addDays(parseDayKey(key), days));
+}

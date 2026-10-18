@@ -74,8 +74,7 @@ export class MiniCalendar {
   protected readonly days = computed(() => {
     const view = this.viewDate();
     const today = new Date();
-    const tasksByDay = this.store.tasksByDay();
-    const eventsByDay = this.store.eventsByDay();
+    const busyDays = this.store.busyDays();
     return monthGrid(view)
       .flat()
       .map((date) => {
@@ -85,7 +84,7 @@ export class MiniCalendar {
           key,
           inMonth: date.getMonth() === view.getMonth(),
           isToday: isSameDay(date, today),
-          hasItems: tasksByDay.has(key) || eventsByDay.has(key),
+          hasItems: busyDays.has(key),
           label: date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }),
         };
       });

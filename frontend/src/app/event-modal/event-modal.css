@@ -36,8 +36,27 @@
   display: flex;
   gap: 12px;
 }
+.row {
+  align-items: flex-end;
+}
 .row .grow {
   flex: 1;
+}
+.all-day {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+.all-day input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+.length {
+  margin-top: -6px;
+  font-size: 12px;
+  color: var(--text-2);
 }
 .colors {
   display: flex;

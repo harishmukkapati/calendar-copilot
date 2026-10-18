@@ -1,5 +1,6 @@
 package dev.calendarcopilot.event;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -14,6 +15,9 @@ import dev.calendarcopilot.workspace.WorkspaceService;
 
 @Service
 public class EventService {
+
+    /** Longest allowed event; keeps a typo from drawing a year-long bar across the calendar. */
+    static final Duration MAX_LENGTH = Duration.ofDays(62);
 
     private final EventRepository events;
     private final WorkspaceService workspaces;
@@ -44,6 +48,7 @@ public class EventService {
         String color = request.color() != null ? request.color() : EventColors.DEFAULT;
         CalendarEvent event = new CalendarEvent(workspaceId, request.title().strip(), startAt, endAt, color);
         event.setDescription(blankToNull(request.description()));
+        event.setAllDay(Boolean.TRUE.equals(request.allDay()));
         return events.save(event);
     }
 
@@ -66,6 +71,9 @@ public class EventService {
         if (request.color() != null) {
             event.setColor(request.color());
         }
+        if (request.allDay() != null) {
+            event.setAllDay(request.allDay());
+        }
         requireEndAfterStart(event.getStartAt(), event.getEndAt());
         return event;
     }
@@ -80,6 +88,9 @@ public class EventService {
     private static void requireEndAfterStart(Instant startAt, Instant endAt) {
         if (endAt.isBefore(startAt)) {
             throw new InvalidRequestException("End time must be after the start time.");
+        }
+        if (Duration.between(startAt, endAt).compareTo(MAX_LENGTH) > 0) {
+            throw new InvalidRequestException("Events can be at most " + MAX_LENGTH.toDays() + " days long.");
         }
     }
 

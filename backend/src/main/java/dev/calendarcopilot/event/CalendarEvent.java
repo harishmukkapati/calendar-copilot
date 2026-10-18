@@ -39,6 +39,10 @@ public class CalendarEvent {
     @Column(nullable = false, length = 16)
     private String color;
 
+    /** Shown as a bar without a time; stored as local midnight to 23:59 of the last day. */
+    @Column(name = "all_day", nullable = false)
+    private boolean allDay;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -78,6 +82,7 @@ public class CalendarEvent {
     public Instant getStartAt() { return startAt; }
     public Instant getEndAt() { return endAt; }
     public String getColor() { return color; }
+    public boolean isAllDay() { return allDay; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 
@@ -86,4 +91,5 @@ public class CalendarEvent {
     public void setStartAt(Instant startAt) { this.startAt = startAt; }
     public void setEndAt(Instant endAt) { this.endAt = endAt; }
     public void setColor(String color) { this.color = color; }
+    public void setAllDay(boolean allDay) { this.allDay = allDay; }
 }

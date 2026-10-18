@@ -47,6 +47,8 @@ export interface CalendarEvent {
   startAt: string;
   endAt: string;
   color: EventColor;
+  /** All-day events are stored as local 00:00 on the first day to 23:59 on the last. */
+  allDay: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,6 +59,7 @@ export interface CreateEventRequest {
   startAt: string;
   endAt: string;
   color?: EventColor;
+  allDay?: boolean;
 }
 
 export type UpdateEventRequest = Partial<CreateEventRequest>;

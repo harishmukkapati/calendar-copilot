@@ -71,6 +71,8 @@ class DemoDataSeeder {
         s.event("Office hours: Prof. Rivera", 5, "14:00", "15:00", "orange");
         s.event("Statistics lecture", 10, "10:00", "11:15", "blue");
         s.event("Statistics midterm", 9, "09:00", "10:30", "red");
+        s.allDayEvent("Fall break", 15, 16, "gray");
+        s.multiDayEvent("Hackathon: HackState", 18, "09:00", 19, "17:00", "purple");
     }
 
     /** Small helper so the seed data above reads like a list. */
@@ -102,6 +104,17 @@ class DemoDataSeeder {
 
         void event(String title, int daysFromToday, String start, String end, String color) {
             events.save(new CalendarEvent(workspaceId, title, at(daysFromToday, start), at(daysFromToday, end), color));
+        }
+
+        void allDayEvent(String title, int firstDay, int lastDay, String color) {
+            CalendarEvent event = new CalendarEvent(workspaceId, title, at(firstDay, "00:00"), at(lastDay, "23:59"),
+                    color);
+            event.setAllDay(true);
+            events.save(event);
+        }
+
+        void multiDayEvent(String title, int startDay, String start, int endDay, String end, String color) {
+            events.save(new CalendarEvent(workspaceId, title, at(startDay, start), at(endDay, end), color));
         }
 
         private Instant at(int daysFromToday, String time) {

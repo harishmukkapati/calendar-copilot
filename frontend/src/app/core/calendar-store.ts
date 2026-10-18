@@ -2,7 +2,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 
 import { ApiService } from './api.service';
-import { dayKeyOf, daysBetween, shiftDays, toOffsetIso } from './date-utils';
+import { eventRange, isSpanning } from '../calendar/event-layout';
+import { addDaysToKey, dayKeyOf, daysBetween, shiftDays, toOffsetIso } from './date-utils';
 import {
   CalendarEvent,
   CreateEventRequest,
@@ -73,9 +74,17 @@ export class CalendarStore {
     return map;
   });
 
+  /** All-day and multi-day events, drawn as bars across the days they cover. */
+  readonly spanningEvents = computed(() =>
+    this.events()
+      .filter(isSpanning)
+      .sort((a, b) => a.startAt.localeCompare(b.startAt)),
+  );
+
+  /** Single-day timed events grouped by local day, drawn as chips in that day's cell. */
   readonly eventsByDay = computed(() => {
     const map = new Map<string, CalendarEvent[]>();
-    for (const event of this.events()) {
+    for (const event of this.events().filter((e) => !isSpanning(e))) {
       const key = dayKeyOf(event.startAt);
       map.set(key, [...(map.get(key) ?? []), event]);
     }
@@ -83,6 +92,18 @@ export class CalendarStore {
       list.sort((a, b) => a.startAt.localeCompare(b.startAt));
     }
     return map;
+  });
+
+  /** Every day with something on it (for the mini calendar's dots). */
+  readonly busyDays = computed(() => {
+    const days = new Set<string>([...this.tasksByDay().keys(), ...this.eventsByDay().keys()]);
+    for (const event of this.spanningEvents()) {
+      const { first, last } = eventRange(event);
+      for (let day = first; day <= last; day = addDaysToKey(day, 1)) {
+        days.add(day);
+      }
+    }
+    return days;
   });
 
   /** Completed / total descendants for each task that has subtasks. */

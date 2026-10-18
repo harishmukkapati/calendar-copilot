@@ -1,4 +1,4 @@
-<div class="month" role="grid" aria-label="Month calendar">
+<div class="month" role="grid" aria-label="Month calendar" [class.is-dragging]="dragging() !== null">
   <div class="weekdays" role="row">
     @for (name of weekdays; track name) {
       <div class="weekday" role="columnheader">{{ name }}</div>
@@ -6,9 +6,9 @@
   </div>
 
   <div class="weeks" [style.grid-template-rows]="'repeat(' + weeks().length + ', minmax(0, 1fr))'">
-    @for (week of weeks(); track week[0].key) {
+    @for (week of weeks(); track week.key) {
       <div class="week" role="row">
-        @for (cell of week; track cell.key) {
+        @for (cell of week.days; track cell.key) {
           <div
             class="day"
             role="gridcell"
@@ -29,10 +29,11 @@
               {{ cell.date.getDate() }}
             </button>
 
+            <!-- Space for this week's bars, which are drawn in the overlay below. -->
+            <div class="lane-space" [style.height.px]="week.visibleLanes * 24"></div>
+
             <ul class="items">
-              <ng-container
-                *ngTemplateOutlet="items; context: { $implicit: cell, all: false }"
-              ></ng-container>
+              <ng-container *ngTemplateOutlet="items; context: { $implicit: cell, all: false }"></ng-container>
             </ul>
 
             @if (cell.hidden > 0) {
@@ -50,14 +51,44 @@
                   </button>
                 </div>
                 <ul class="items">
-                  <ng-container
-                    *ngTemplateOutlet="items; context: { $implicit: cell, all: true }"
-                  ></ng-container>
+                  @for (ev of cell.spanning; track ev.id) {
+                    <li>
+                      <button class="chip event" type="button" [attr.data-color]="ev.color" (click)="openEvent(ev.id, $event)">
+                        <span class="dot"></span>
+                        <span class="time">{{ spanLabel(ev) }}</span>
+                        <span class="title">{{ ev.title }}</span>
+                      </button>
+                    </li>
+                  }
+                  <ng-container *ngTemplateOutlet="items; context: { $implicit: cell, all: true }"></ng-container>
                 </ul>
               </div>
             }
           </div>
         }
+
+        <!-- All-day and multi-day events: one bar per week, kept in the same lane across days. -->
+        <div class="bars" [style.grid-template-rows]="'repeat(' + week.visibleLanes + ', 22px)'">
+          @for (s of week.segments; track s.event.id) {
+            <button
+              class="bar"
+              type="button"
+              draggable="true"
+              [attr.data-color]="s.event.color"
+              [class.cont-before]="s.continuesBefore"
+              [class.cont-after]="s.continuesAfter"
+              [class.dragging]="isDragging('event', s.event.id)"
+              [style.grid-column]="s.startCol + 1 + ' / ' + (s.endCol + 2)"
+              [style.grid-row]="s.lane + 1"
+              [title]="s.event.title + ' (' + spanLabel(s.event) + '). Drag to reschedule.'"
+              (dragstart)="onBarDragStart($event, s, week)"
+              (dragend)="onDragEnd()"
+              (click)="openEvent(s.event.id, $event)"
+            >
+              {{ barLabel(s) }}
+            </button>
+          }
+        </div>
       </div>
     }
   </div>
@@ -75,7 +106,7 @@
         title="Drag to another day to reschedule"
         [attr.data-color]="ev.color"
         [class.dragging]="isDragging('event', ev.id)"
-        (dragstart)="onDragStart($event, { kind: 'event', id: ev.id })"
+        (dragstart)="onDragStart($event, 'event', ev.id)"
         (dragend)="onDragEnd()"
         (click)="openEvent(ev.id, $event)"
       >
@@ -93,7 +124,7 @@
         [class.done]="task.status === 'DONE'"
         [class.subtask]="task.parentId != null"
         [class.dragging]="isDragging('task', task.id)"
-        (dragstart)="onDragStart($event, { kind: 'task', id: task.id })"
+        (dragstart)="onDragStart($event, 'task', task.id)"
         (dragend)="onDragEnd()"
       >
         <button

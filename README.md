@@ -20,8 +20,8 @@ I also built it to learn a stack I had less experience with (Java/Spring Boot, A
 
 - **Month calendar.** Navigation, today highlight, tasks and events on their dates, mini calendar, and a "My tasks" sidebar with progress bars.
 - **Task hierarchy.** Tasks contain subtasks, up to three levels. You can create, edit, complete and delete them (deletes cascade), and expand or collapse levels. Progress rolls up from every level.
-- **Events.** Time-boxed entries with colors, kept distinct from tasks.
-- **Drag to reschedule.** Drag a task or event to another day. Tasks keep their due time, and events keep their time and duration.
+- **Events.** Timed, all-day, or multi-day (up to 62 days), with colors, kept distinct from tasks. Multi-day and all-day events show as bars across the days they cover and wrap cleanly across weeks.
+- **Drag to reschedule.** Drag a task or event to another day. Tasks keep their due time, and events keep their time and duration. Grab a multi-day bar on any of its days, and that day lands where you drop it.
 - **AI planning (optional).** Upload a PDF, PNG, JPEG or TXT as assignment instructions, a rubric or supporting material, and add optional context. Then:
   - **Review** the extracted requirements, each with its source quote and verification status.
   - **Edit** the draft: rename, re-date, remove or add steps.
@@ -153,8 +153,8 @@ cd backend && ./mvnw test              # needs Docker (Testcontainers PostgreSQL
 cd frontend && npx ng test --watch=false
 ```
 
-- **Backend: 58 tests.** Task and event CRUD, hierarchy depth and cascade deletes, cross-workspace isolation, validation errors, PDF and image detection and limits, citation verification, plan validation and limits, Gemini client behavior (schema request, provider errors, blocked content, timeouts) against a real local HTTP server, retry on malformed output, rate limits under 50 parallel threads, optimistic locking under concurrent writers, and confirm-plan persistence.
-- **Frontend: 17 tests.** Month grid math, offset-aware dates, DST-safe drag rescheduling, the hierarchy and progress rollup, optimistic updates with rollback, ordered per-item writes, and draft-to-request mapping.
+- **Backend: 62 tests.** Task and event CRUD (including multi-day and all-day events), hierarchy depth and cascade deletes, cross-workspace isolation, validation errors, PDF and image detection and limits, citation verification, plan validation and limits, Gemini client behavior (schema request, provider errors, blocked content, timeouts) against a real local HTTP server, retry on malformed output, rate limits under 50 parallel threads, optimistic locking under concurrent writers, and confirm-plan persistence.
+- **Frontend: 22 tests.** Month grid math, offset-aware dates, DST-safe drag rescheduling, multi-day bar layout (lanes, week wrapping, midnight edge cases), the hierarchy and progress rollup, optimistic updates with rollback, ordered per-item writes, and draft-to-request mapping.
 
 ## Deployment
 
