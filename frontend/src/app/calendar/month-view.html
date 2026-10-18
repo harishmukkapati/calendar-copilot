@@ -14,7 +14,11 @@
             role="gridcell"
             [class.outside]="!cell.inMonth"
             [class.today]="cell.isToday"
+            [class.drop-target]="dropTarget() === cell.key"
             (click)="openDay(cell.key)"
+            (dragover)="onDragOver($event, cell.key)"
+            (dragleave)="onDragLeave($event, cell.key)"
+            (drop)="onDrop($event, cell)"
           >
             <button
               class="day-number"
@@ -59,10 +63,22 @@
   </div>
 </div>
 
+<p class="sr-only" aria-live="polite">{{ announcement() }}</p>
+
 <ng-template #items let-cell let-all="all">
   @for (ev of visibleEvents(cell, all); track ev.id) {
     <li>
-      <button class="chip event" type="button" [attr.data-color]="ev.color" (click)="openEvent(ev.id, $event)">
+      <button
+        class="chip event"
+        type="button"
+        draggable="true"
+        title="Drag to another day to reschedule"
+        [attr.data-color]="ev.color"
+        [class.dragging]="isDragging('event', ev.id)"
+        (dragstart)="onDragStart($event, { kind: 'event', id: ev.id })"
+        (dragend)="onDragEnd()"
+        (click)="openEvent(ev.id, $event)"
+      >
         <span class="dot"></span>
         <span class="time">{{ formatTime(ev.startAt) }}</span>
         <span class="title">{{ ev.title }}</span>
@@ -71,7 +87,15 @@
   }
   @for (task of visibleTasks(cell, all); track task.id) {
     <li>
-      <div class="chip task" [class.done]="task.status === 'DONE'" [class.subtask]="task.parentId != null">
+      <div
+        class="chip task"
+        draggable="true"
+        [class.done]="task.status === 'DONE'"
+        [class.subtask]="task.parentId != null"
+        [class.dragging]="isDragging('task', task.id)"
+        (dragstart)="onDragStart($event, { kind: 'task', id: task.id })"
+        (dragend)="onDragEnd()"
+      >
         <button
           class="check"
           type="button"

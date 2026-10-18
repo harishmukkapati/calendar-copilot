@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 
 import { ApiService } from './api.service';
-import { dayKeyOf } from './date-utils';
+import { dayKeyOf, daysBetween, shiftDays, toOffsetIso } from './date-utils';
 import {
   CalendarEvent,
   CreateEventRequest,
@@ -186,6 +186,25 @@ export class CalendarStore {
     return this.updateTask(task.id, { status: task.status === 'DONE' ? 'TODO' : 'DONE' });
   }
 
+  /**
+   * Drag-and-drop reschedule: moves the due date to another day at the same local time.
+   * A start time moves by the same number of days so the task keeps its length.
+   */
+  moveTask(task: Task, toDay: string): Promise<boolean> {
+    if (!task.dueAt) {
+      return Promise.resolve(false);
+    }
+    const days = daysBetween(dayKeyOf(task.dueAt), toDay);
+    if (days === 0) {
+      return Promise.resolve(true);
+    }
+    const request: UpdateTaskRequest = { dueAt: toOffsetIso(shiftDays(task.dueAt, days)) };
+    if (task.startAt) {
+      request.startAt = toOffsetIso(shiftDays(task.startAt, days));
+    }
+    return this.updateTask(task.id, request);
+  }
+
   /** Removes the task and its whole subtree, matching the server's cascade delete. */
   async deleteTask(id: number): Promise<boolean> {
     const snapshot = this.tasks();
@@ -233,7 +252,10 @@ export class CalendarStore {
     }
     const key = `event:${id}`;
     const write = this.startWrite(key);
-    this.replaceEvent({ ...before, ...stripUndefined(request) } as CalendarEvent);
+    const optimistic = { ...before, ...stripUndefined(request) } as CalendarEvent;
+    optimistic.startAt = new Date(optimistic.startAt).toISOString();
+    optimistic.endAt = new Date(optimistic.endAt).toISOString();
+    this.replaceEvent(optimistic);
     try {
       const saved = await this.enqueue(key, () => this.api.updateEvent(id, request));
       if (this.isLatest(key, write)) {
@@ -248,6 +270,18 @@ export class CalendarStore {
       this.resync();
       return false;
     }
+  }
+
+  /** Drag-and-drop reschedule: same start time and duration on another day. */
+  moveEvent(event: CalendarEvent, toDay: string): Promise<boolean> {
+    const days = daysBetween(dayKeyOf(event.startAt), toDay);
+    if (days === 0) {
+      return Promise.resolve(true);
+    }
+    return this.updateEvent(event.id, {
+      startAt: toOffsetIso(shiftDays(event.startAt, days)),
+      endAt: toOffsetIso(shiftDays(event.endAt, days)),
+    });
   }
 
   async deleteEvent(id: number): Promise<boolean> {

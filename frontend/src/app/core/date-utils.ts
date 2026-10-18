@@ -81,3 +81,18 @@ export function formatDueDate(iso: string): string {
 function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
+
+/** Whole calendar days from one "YYYY-MM-DD" to another (DST-safe: counts dates, not hours). */
+export function daysBetween(fromDay: string, toDay: string): number {
+  const toUtc = (day: string) => {
+    const [y, m, d] = day.split('-').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((toUtc(toDay) - toUtc(fromDay)) / 86_400_000);
+}
+
+/** Same local time of day, `days` calendar days later (keeps 9:00 at 9:00 across DST changes). */
+export function shiftDays(iso: string, days: number): Date {
+  const d = new Date(iso);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days, d.getHours(), d.getMinutes(), d.getSeconds());
+}

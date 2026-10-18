@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import { CalendarStore, applyTaskUpdate } from './calendar-store';
+import { dayKeyOf } from './date-utils';
 import { Task } from './models';
 import { WorkspaceService } from './workspace.service';
 
@@ -148,6 +149,42 @@ describe('CalendarStore', () => {
 
     expect((await result)?.length).toBe(2);
     expect(store.childrenOf().get(10)?.map((t) => t.title)).toEqual(['Step']);
+  });
+
+  it('moves a dragged task to another day at the same local time', async () => {
+    const due = new Date(2026, 9, 20, 17, 30); // Oct 20, 5:30 pm local
+    const start = new Date(2026, 9, 19, 9, 0);
+    store.tasks.set([task({ id: 3, dueAt: due.toISOString(), startAt: start.toISOString() })]);
+
+    const result = store.moveTask(store.tasks()[0], '2026-10-23');
+    const movedDue = new Date(store.tasks()[0].dueAt!);
+    expect(movedDue.getDate()).toBe(23);
+    expect(movedDue.getHours()).toBe(17); // optimistic, before the server answers
+
+    const req = http.expectOne({ method: 'PATCH', url: '/api/tasks/3' });
+    expect(req.request.body.dueAt).toMatch(/^2026-10-23T17:30:00[+-]\d{2}:\d{2}$/);
+    expect(req.request.body.startAt).toMatch(/^2026-10-22T09:00:00[+-]\d{2}:\d{2}$/); // shifted by 3 days too
+    req.flush(task({ id: 3, dueAt: movedDue.toISOString() }));
+    expect(await result).toBe(true);
+  });
+
+  it('moves a dragged event keeping its duration, and ignores drops on the same day', async () => {
+    const start = new Date(2026, 9, 21, 15, 0);
+    const end = new Date(2026, 9, 21, 16, 30);
+    store.events.set([
+      { id: 8, title: 'Meeting', description: null, color: 'blue', startAt: start.toISOString(), endAt: end.toISOString(), createdAt: '', updatedAt: '' },
+    ]);
+
+    expect(await store.moveEvent(store.events()[0], '2026-10-21')).toBe(true);
+    http.expectNone('/api/events/8');
+
+    const result = store.moveEvent(store.events()[0], '2026-10-19');
+    const req = http.expectOne({ method: 'PATCH', url: '/api/events/8' });
+    expect(req.request.body.startAt).toMatch(/^2026-10-19T15:00:00/);
+    expect(req.request.body.endAt).toMatch(/^2026-10-19T16:30:00/);
+    expect(dayKeyOf(store.events()[0].startAt)).toBe('2026-10-19'); // optimistic
+    req.flush({ ...store.events()[0] });
+    expect(await result).toBe(true);
   });
 
   it('mirrors PATCH semantics for optimistic updates', () => {

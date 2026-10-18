@@ -21,6 +21,7 @@ I also built it to learn a stack I had less experience with (Java/Spring Boot, A
 - **Month calendar.** Navigation, today highlight, tasks and events on their dates, mini calendar, and a "My tasks" sidebar with progress bars.
 - **Task hierarchy.** Tasks contain subtasks, up to three levels. You can create, edit, complete and delete them (deletes cascade), and expand or collapse levels. Progress rolls up from every level.
 - **Events.** Time-boxed entries with colors, kept distinct from tasks.
+- **Drag to reschedule.** Drag a task or event to another day. Tasks keep their due time, and events keep their time and duration.
 - **AI planning (optional).** Upload a PDF, PNG, JPEG or TXT as assignment instructions, a rubric or supporting material, and add optional context. Then:
   - **Review** the extracted requirements, each with its source quote and verification status.
   - **Edit** the draft: rename, re-date, remove or add steps.
@@ -153,7 +154,7 @@ cd frontend && npx ng test --watch=false
 ```
 
 - **Backend: 58 tests.** Task and event CRUD, hierarchy depth and cascade deletes, cross-workspace isolation, validation errors, PDF and image detection and limits, citation verification, plan validation and limits, Gemini client behavior (schema request, provider errors, blocked content, timeouts) against a real local HTTP server, retry on malformed output, rate limits under 50 parallel threads, optimistic locking under concurrent writers, and confirm-plan persistence.
-- **Frontend: 13 tests.** Month grid math, offset-aware dates, the hierarchy and progress rollup, optimistic updates with rollback, ordered per-item writes, and draft-to-request mapping.
+- **Frontend: 17 tests.** Month grid math, offset-aware dates, DST-safe drag rescheduling, the hierarchy and progress rollup, optimistic updates with rollback, ordered per-item writes, and draft-to-request mapping.
 
 ## Deployment
 
@@ -163,7 +164,7 @@ Terraform provisions everything in `us-east-2`, and two scripts deploy the backe
 
 - **Sign-in:** Cognito with Google and email one-time codes; claim the guest workspace on first sign-in.
 - **Streaming:** stream generation so steps appear as they're written.
-- **Partial regeneration:** regenerate a single step with feedback. Also week view and drag-to-reschedule.
+- **Partial regeneration:** regenerate a single step with feedback. Also a week view, and drag-and-drop on touch screens.
 - **Hardening for scale:** private EC2 behind CloudFront VPC origins, Multi-AZ RDS, WAF rate rules, Redis-backed rate limits for multiple instances, and deploys from GitHub Actions with OIDC.
 - **Verification limits:** citation checks cover text documents. Requirements read from images or scanned PDFs are marked "not checked" rather than verified.
 

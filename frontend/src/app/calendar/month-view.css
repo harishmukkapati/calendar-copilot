@@ -214,6 +214,21 @@
   color: var(--text-2);
 }
 
+/* Drag and drop */
+.chip[draggable='true'] {
+  cursor: grab;
+}
+.chip[draggable='true']:active {
+  cursor: grabbing;
+}
+.chip.dragging {
+  opacity: 0.4;
+}
+.day.drop-target {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
 @media (max-width: 720px) {
   .day {
     min-height: 72px;
