@@ -114,21 +114,21 @@ final class PlanPrompt {
         Map<String, Object> subtask = object(
                 "title", string(null),
                 "basis", enumString("SOURCE", "SUGGESTED"),
-                "requirementIds", array(string(null), MAX_REQUIREMENTS));
+                "requirementIds", array(string(null)));
 
         Map<String, Object> task = object(
                 "title", string(null),
                 "description", string(null),
                 "basis", enumString("SOURCE", "SUGGESTED"),
-                "requirementIds", array(string(null), MAX_REQUIREMENTS),
+                "requirementIds", array(string(null)),
                 "suggestedDueDate", string("YYYY-MM-DD, or empty"),
-                "subtasks", array(subtask, MAX_SUBTASKS));
+                "subtasks", array(subtask));
 
         return object(
                 "summary", string(null),
-                "requirements", array(requirement, MAX_REQUIREMENTS),
-                "tasks", array(task, MAX_TASKS),
-                "uncertainties", array(string(null), 6));
+                "requirements", array(requirement),
+                "tasks", array(task),
+                "uncertainties", array(string(null)));
     }
 
     /**
@@ -150,8 +150,13 @@ final class PlanPrompt {
         return schema;
     }
 
-    private static Map<String, Object> array(Map<String, Object> items, int maxItems) {
-        return Map.of("type", "ARRAY", "items", items, "maxItems", maxItems);
+    /**
+     * No maxItems: combined with enums and nested arrays it makes the schema too complex
+     * for Gemini's constrained decoding (HTTP 400 INVALID_ARGUMENT). Limits are stated in
+     * the prompt and enforced by PlanValidator instead.
+     */
+    private static Map<String, Object> array(Map<String, Object> items) {
+        return Map.of("type", "ARRAY", "items", items);
     }
 
     private static Map<String, Object> string(String description) {
